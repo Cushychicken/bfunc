@@ -99,9 +99,9 @@ Wire Wire Line
 Wire Wire Line
 	3150 3950 3150 3800
 Text Label 3700 3500 0    50   ~ 0
-USB_DM
+USB_D_M
 Text Label 3700 3400 0    50   ~ 0
-USB_DP
+USB_D_P
 Wire Wire Line
 	3550 3200 3800 3200
 $Comp
@@ -257,9 +257,9 @@ Connection ~ 7650 3350
 Wire Wire Line
 	7650 3350 7650 3200
 Text HLabel 4500 3400 2    50   BiDi ~ 0
-USB_DP
+USB_D_P
 Text HLabel 4500 3500 2    50   BiDi ~ 0
-USB_DM
+USB_D_N
 Wire Wire Line
 	3550 3500 4500 3500
 Wire Wire Line
