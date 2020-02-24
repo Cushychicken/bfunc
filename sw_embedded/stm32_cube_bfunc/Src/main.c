@@ -67,21 +67,36 @@ enum waveform_modes {
 };
 
 struct ad9837_ctrl_reg {
-	int freqreg		: 2; 
-	int b28			: 1;
-	int hlb			: 1;
-	int fsel		: 1;
-	int psel		: 1;
-	int reserved9   : 1;
-	int reset	    : 1;
-	int sleep1	    : 1;
-	int sleep12	    : 1;
-	int opbiten	    : 1;
-	int reserved4   : 1;
-	int div2	    : 1;
-	int reserved2   : 1;
-	int mode	    : 1;
-	int reserved0   : 1;
+	unsigned int reserved0	: 1;
+	unsigned int mode	    : 1;
+	unsigned int reserved2	: 1;
+	unsigned int div2	    : 1;
+	unsigned int reserved4	: 1;
+	unsigned int opbiten	: 1;
+	unsigned int sleep12	: 1;
+	unsigned int sleep1	    : 1;
+	unsigned int reset	    : 1;
+	unsigned int reserved9	: 1;
+	unsigned int psel		: 1;
+	unsigned int fsel		: 1;
+	unsigned int hlb		: 1;
+	unsigned int b28		: 1;
+	unsigned int freqreg	: 2; 
+};
+
+struct ad9837_freq_reg {
+	unsigned int freqset	: 14;
+	unsigned int freqreg    : 2;
+}; 
+
+union ad9837_dds_ctrl {
+    struct ad9837_ctrl_reg reg;
+    uint8_t data[2];
+};
+
+union ad9837_freq_set {
+	struct ad9837_freq_reg reg;
+	uint8_t data[2];
 };
 /* USER CODE END PV */
 
@@ -93,12 +108,12 @@ static void MX_SPI1_Init(void);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
-void InitCtrlAD9837(struct ad9837_ctrl_reg *dds_control);
-void StartOutput(void);
-void StopOutput(void);
+void InitCtrlAD9837(union ad9837_dds_ctrl *dds_control);
+void StartOutput(union ad9837_dds_ctrl *dds_control);
+void StopOutput(union ad9837_dds_ctrl *dds_control);
 void SetFreq0Value(uint32_t freq);
-void SetWaveformMode(enum   waveform_modes  Mode, 
-					 struct ad9837_ctrl_reg *dds_control);
+void SetWaveformMode(enum   states			current_state, 
+					 union ad9837_dds_ctrl *dds_control);
 enum states NextState(enum states CurrentState);
 /* USER CODE END PFP */
 
@@ -155,8 +170,7 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   enum states current_state = IDLE;
-  enum waveform_modes current_mode = SINE;
-  struct ad9837_ctrl_reg dds_control;
+  union ad9837_dds_ctrl dds_control;
 
   InitCtrlAD9837(&dds_control);
 
@@ -169,6 +183,14 @@ int main(void)
   
 	delay_us(48000000);
 	current_state = NextState(current_state);
+
+	if (current_state == IDLE) {
+		StopOutput(&dds_control);
+	} else {
+		SetWaveformMode(current_state, &dds_control);
+		StartOutput(&dds_control);
+	}
+
 	GPIOC->BSRR = GPIO_BSRR_BR13;
 	delay_us(48000000);
   /* USER CODE END WHILE */
@@ -317,85 +339,92 @@ static void MX_GPIO_Init(void)
 
 
 /* USER CODE BEGIN 4 */
-void InitCtrlAD9837(struct ad9837_ctrl_reg *dds_control)
+void InitCtrlAD9837(union ad9837_dds_ctrl *dds_control)
 {
-	dds_control->freqreg	= 0;
-	dds_control->b28		= 1;
-	dds_control->hlb		= 0;
-	dds_control->fsel		= 0;
-	dds_control->psel		= 0;
-	dds_control->reserved9  = 0;
-	dds_control->reset	    = 0;
-	dds_control->sleep1	    = 0;
-	dds_control->sleep12    = 0;
-	dds_control->opbiten    = 0;
-	dds_control->reserved4  = 0;
-	dds_control->div2	    = 0;
-	dds_control->reserved2  = 0;
-	dds_control->mode	    = 0;
-	dds_control->reserved0  = 0;
+	dds_control->reg.freqreg	= 0;
+	dds_control->reg.b28		= 1;
+	dds_control->reg.hlb		= 0;
+	dds_control->reg.fsel		= 0;
+	dds_control->reg.psel		= 0;
+	dds_control->reg.reserved9  = 0;
+	dds_control->reg.reset	    = 1;
+	dds_control->reg.sleep1	    = 0;
+	dds_control->reg.sleep12    = 0;
+	dds_control->reg.opbiten    = 0;
+	dds_control->reg.reserved4  = 0;
+	dds_control->reg.div2	    = 0;
+	dds_control->reg.reserved2  = 0;
+	dds_control->reg.mode	    = 0;
+	dds_control->reg.reserved0  = 0;
 }
 
 void SetFreq0Value(uint32_t freq) 
 {
-	
-	uint8_t data[2] = { 0x00, 0x20 };
+	union ad9837_freq_set freq0;
+	freq0.reg.freqreg = 1;
+	freq0.reg.freqset = (unsigned int)(freq & 0x00003fff);
 	// Note: All SPI transactions are len=1, but 
 	// require a 2 byte input due to the peripheral being 
 	// in 16-bit output mode
 	
 	// Sets 14 LSBs of Freq0 register
-	data[0] = (uint8_t)(freq & 0x000000ff);
-	data[1] = (uint8_t)(0x40 | ((freq & 0x00003f00)>>8));
-	HAL_SPI_Transmit(&hspi1, data, 1, 10);
+	HAL_SPI_Transmit(&hspi1, freq0.data, 1, 10);
 	// Sets 14 MSBs of Freq0 register
-	data[0] = (uint8_t)((freq & 0x003fc000)>>14);
-	data[1] = (uint8_t)(0x40 | ((freq & 0x0fc00000)>>22));
-	HAL_SPI_Transmit(&hspi1, data, 1, 10);
+	//HAL_SPI_Transmit(&hspi1, data, 1, 10);
      	
 }
 
-void StartOutput(void) {
-	uint8_t data[2] = { 0x00, 0x20 };
+void StartOutput(union ad9837_dds_ctrl *dds_control) {
 	// Note: All SPI transactions are len=1, but 
 	// require a 2 byte input due to the peripheral being 
 	// in 16-bit output mode
-	HAL_SPI_Transmit(&hspi1, data, 1, 10);
+	dds_control->reg.reset = 0;
+	HAL_SPI_Transmit(&hspi1, 
+					 dds_control->data, 1, 10);
 }
 
-void StopOutput(void) 
+void StopOutput(union ad9837_dds_ctrl *dds_control) 
 {
-	
-	uint8_t data[2] = { 0x00, 0x21 };
 	// Note: All SPI transactions are len=1, but 
 	// require a 2 byte input due to the peripheral being 
 	// in 16-bit output mode
-	HAL_SPI_Transmit(&hspi1, data, 1, 10);
-    	
+	dds_control->reg.reset = 1;
+	HAL_SPI_Transmit(&hspi1, 
+					 dds_control->data, 1, 10);
 }
 
-void SetWaveformMode(enum   waveform_modes  Mode, 
-					 struct ad9837_ctrl_reg *dds_control)
+void SetWaveformMode(enum   states			current_state, 
+					 union  ad9837_dds_ctrl *dds_control)
 {
-	uint8_t data[2] = { 0x00, 0x00 };
-	switch (Mode) {
-		case SINE:
+	switch (current_state) {
+		case WFM_OUT_SINE:
 			// Clears OPBITEN and MODE bits
-			dds_control->opbiten = 0;
-			dds_control->mode    = 0;
+			dds_control->reg.opbiten = 0;
+			dds_control->reg.mode    = 0;
+			// Transmits new settings to DDS via SPI
+			HAL_SPI_Transmit(&hspi1, 
+							 dds_control->data, 
+							 1, 
+							 10);
 			break;
-		case TRIANGLE:
+		case WFM_OUT_TRIANGLE:
 			// Sets MODE bit; clears OPBITEN
-			dds_control->opbiten = 0;
-			dds_control->mode    = 1;
-			data[0] = 0x02;
-			data[1] = 0x20;
+			dds_control->reg.opbiten = 0;
+			dds_control->reg.mode    = 1;
+			// Transmits new settings to DDS via SPI
+			HAL_SPI_Transmit(&hspi1, 
+							 dds_control->data, 
+							 1, 
+							 10);
 			break;
-		case SQUARE:
+		case WFM_OUT_SQUARE:
 			// Sets OPBITEN;
-			dds_control->opbiten = 1;
-			data[0] = 0x20;
-			data[1] = 0x20;
+			dds_control->reg.opbiten = 1;
+			// Transmits new settings to DDS via SPI
+			HAL_SPI_Transmit(&hspi1, 
+							 dds_control->data, 
+							 1, 
+							 10);
 			break;
 		default:
 			break;	
@@ -406,15 +435,12 @@ enum states NextState(enum states CurrentState)
 {
 	switch (CurrentState) {
 		case IDLE:
-			StartOutput();
 			return WFM_OUT_SINE;
 			break;
 		case WFM_OUT_SINE:
-			StopOutput();
 			return IDLE;
 			break;
 		default:
-			StopOutput();
 			return IDLE;
 			break;
 	}
