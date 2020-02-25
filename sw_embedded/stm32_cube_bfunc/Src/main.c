@@ -89,6 +89,12 @@ struct ad9837_freq_reg {
 	unsigned int freqreg    : 2;
 }; 
 
+struct ad9837_phase_reg {
+	unsigned int phaseset   : 12;
+	unsigned int reserved   : 1;
+	unsigned int phasereg   : 3;
+}; 
+
 union ad9837_dds_ctrl {
     struct ad9837_ctrl_reg reg;
     uint8_t data[2];
@@ -96,6 +102,11 @@ union ad9837_dds_ctrl {
 
 union ad9837_freq_set {
 	struct ad9837_freq_reg reg;
+	uint8_t data[2];
+};
+
+union ad9837_phase_set {
+	struct ad9837_phase_reg reg;
 	uint8_t data[2];
 };
 /* USER CODE END PV */
@@ -112,6 +123,9 @@ void InitCtrlAD9837(union ad9837_dds_ctrl *dds_control);
 void StartOutput(union ad9837_dds_ctrl *dds_control);
 void StopOutput(union ad9837_dds_ctrl *dds_control);
 void SetFreq0Value(uint32_t freq);
+void SetFreq1Value(uint32_t freq);
+void SetPhase0Value(uint16_t phase);
+void SetPhase1Value(uint16_t phase);
 void SetWaveformMode(enum   states			current_state, 
 					 union ad9837_dds_ctrl *dds_control);
 enum states NextState(enum states CurrentState);
@@ -176,6 +190,7 @@ int main(void)
 
   // Initializing AD9837 as per ADI App Note AN-1070
   SetFreq0Value(0x00002000);
+  SetPhase0Value(0x00FF);
 
   while (1)
   {
@@ -370,8 +385,44 @@ void SetFreq0Value(uint32_t freq)
 	// Sets 14 LSBs of Freq0 register
 	HAL_SPI_Transmit(&hspi1, freq0.data, 1, 10);
 	// Sets 14 MSBs of Freq0 register
-	//HAL_SPI_Transmit(&hspi1, data, 1, 10);
-     	
+	freq0.reg.freqreg = 1;
+	freq0.reg.freqset = (unsigned int)((freq & 0x0fffc000) >> 14);
+	HAL_SPI_Transmit(&hspi1, freq0.data, 1, 10);
+}
+
+void SetFreq1Value(uint32_t freq) 
+{
+	union ad9837_freq_set freq1;
+	freq1.reg.freqreg = 2;
+	freq1.reg.freqset = (unsigned int)(freq & 0x00003fff);
+	// Note: All SPI transactions are len=1, but 
+	// require a 2 byte input due to the peripheral being 
+	// in 16-bit output mode
+	
+	// Sets 14 LSBs of Freq0 register
+	HAL_SPI_Transmit(&hspi1, freq1.data, 1, 10);
+	// Sets 14 MSBs of Freq0 register
+	freq1.reg.freqreg = 1;
+	freq1.reg.freqset = (unsigned int)((freq & 0x0fffc000) >> 14);
+	HAL_SPI_Transmit(&hspi1, freq1.data, 1, 10);
+}
+
+void SetPhase0Value(uint16_t phase)
+{
+	union ad9837_phase_set phase0;
+	phase0.reg.phasereg = 6; // Must be 0x6 (0b110) to set PHASEREG bit
+	phase0.reg.reserved = 0;
+	phase0.reg.phaseset = (phase & 0x0fff);
+	HAL_SPI_Transmit(&hspi1, phase0.data, 1, 10);
+}
+
+void SetPhase1Value(uint16_t phase)
+{
+	union ad9837_phase_set phase1;
+	phase1.reg.phasereg = 7; // Must be 0x7 (0b111) to set PHASEREG bit
+	phase1.reg.reserved = 0;
+	phase1.reg.phaseset = (phase & 0x0fff);
+	HAL_SPI_Transmit(&hspi1, phase1.data, 1, 10);
 }
 
 void StartOutput(union ad9837_dds_ctrl *dds_control) {
@@ -438,6 +489,9 @@ enum states NextState(enum states CurrentState)
 			return WFM_OUT_SINE;
 			break;
 		case WFM_OUT_SINE:
+			return WFM_OUT_TRIANGLE;
+			break;
+		case WFM_OUT_TRIANGLE:
 			return IDLE;
 			break;
 		default:
