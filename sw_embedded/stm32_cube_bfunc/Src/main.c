@@ -139,7 +139,7 @@ void SetFreq1Value(uint32_t freq);
 void SetPhase0Value(uint16_t phase);
 void SetPhase1Value(uint16_t phase);
 void SetWaveformMode(enum   states			current_state, 
-					 union ad9837_dds_ctrl *dds_control);
+					 union  ad9837_dds_ctrl *dds_control);
 enum states NextState(enum states CurrentState);
 /* USER CODE END PFP */
 
@@ -200,12 +200,49 @@ int main(void)
   SetFreq0Value(0x00002000);
   SetPhase0Value(0x00FF);
 
-  uint8_t buffer[] = "Welcome to bFunc. Stay funky.\r\n";
-  CDC_Transmit_FS(buffer, sizeof(buffer));
+  uint8_t	*head_parse_target  = UserRxBufferFS;
+  uint8_t	*tail_parse_target  = UserRxBufferFS;
+  uint8_t   parse_buffer[64];
+  uint8_t	*head_parse_target  = parse_buffer;
+  uint8_t	*tail_parse_target  = parse_buffer;
+  uint8_t	usb_packet_flag		= 0;
 
   while (1)
   {
 	GPIOC->BSRR = GPIO_BSRR_BS13;
+
+	/*
+	for (int i = 0; i < APP_RX_DATA_SIZE; i++) {
+		if (UserRxBufferFS[i] == '@') {
+			head_parse_target = &UserRxBufferFS[i];
+		}
+		if (UserRxBufferFS[i] == '\r') {
+			tail_parse_target = &UserRxBufferFS[i];
+			CDC_Transmit_FS(head_parse_target, 
+							(tail_parse_target-head_parse_target));
+		}
+	}
+	*/
+
+    if (usb_packet_flag) {
+        switch(UserRxBufferFS[0]) {
+            case 'q':
+                current_state = WFM_OUT_SQUARE;
+                break;
+            case 's':
+                current_state = WFM_OUT_SINE;
+                break;
+            case 't':
+                current_state = WFM_OUT_TRIANGLE;
+                break;
+            case 'i':
+                current_state = IDLE;
+                break;
+            default:
+                break;
+        }
+        usb_packet_flag = 0;
+    }
   
 	delay_us(48000000);
 	current_state = NextState(current_state);

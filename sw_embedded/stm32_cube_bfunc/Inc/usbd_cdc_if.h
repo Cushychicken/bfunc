@@ -77,7 +77,8 @@
   * @{
   */
 /* USER CODE BEGIN EXPORTED_DEFINES */
-
+#define APP_RX_DATA_SIZE  1000
+#define APP_TX_DATA_SIZE  1000
 /* USER CODE END EXPORTED_DEFINES */
 
 /**
@@ -119,7 +120,8 @@
 extern USBD_CDC_ItfTypeDef USBD_Interface_fops_FS;
 
 /* USER CODE BEGIN EXPORTED_VARIABLES */
-
+uint8_t UserRxBufferFS[APP_RX_DATA_SIZE];
+extern uint8_t usb_packet_flag;
 /* USER CODE END EXPORTED_VARIABLES */
 
 /**
