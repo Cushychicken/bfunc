@@ -80,14 +80,14 @@ enum waveform_modes {
 
 struct ad9837_ctrl_reg {
 	unsigned int reserved0	: 1;
-	unsigned int mode	    : 1;
+	unsigned int mode		: 1;
 	unsigned int reserved2	: 1;
-	unsigned int div2	    : 1;
+	unsigned int div2		: 1;
 	unsigned int reserved4	: 1;
 	unsigned int opbiten	: 1;
 	unsigned int sleep12	: 1;
-	unsigned int sleep1	    : 1;
-	unsigned int reset	    : 1;
+	unsigned int sleep1		: 1;
+	unsigned int reset		: 1;
 	unsigned int reserved9	: 1;
 	unsigned int psel		: 1;
 	unsigned int fsel		: 1;
@@ -417,14 +417,14 @@ void InitCtrlAD9837(union ad9837_dds_ctrl *dds_control)
 	dds_control->reg.fsel		= 0;
 	dds_control->reg.psel		= 0;
 	dds_control->reg.reserved9  = 0;
-	dds_control->reg.reset	    = 1;
-	dds_control->reg.sleep1	    = 0;
+	dds_control->reg.reset		= 1;
+	dds_control->reg.sleep1		= 0;
 	dds_control->reg.sleep12    = 0;
 	dds_control->reg.opbiten    = 0;
 	dds_control->reg.reserved4  = 0;
-	dds_control->reg.div2	    = 0;
+	dds_control->reg.div2		= 0;
 	dds_control->reg.reserved2  = 0;
-	dds_control->reg.mode	    = 0;
+	dds_control->reg.mode		= 0;
 	dds_control->reg.reserved0  = 0;
 }
 
