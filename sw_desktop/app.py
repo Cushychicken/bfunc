@@ -2,7 +2,7 @@ from Tkinter import *
 
 window = Tk()
 window.title("bFunc Control")
-window.geometry('350x200')
+window.geometry('500x200')
 
 mainframe = Frame(window)
 mainframe.grid(column=0,row=0, sticky=(N,W,E,S) )
@@ -15,46 +15,72 @@ tkvar = StringVar(window)
 choices = { 'Sine', 'Square', 'Triangle' }
 tkvar.set('Sine') # set the default option
 
-# Create a Tkinter variable for Frequency
-tkvar_freq = StringVar(window)
-tkvar_freq.set('10000')
+# Create a Tkinter variable for Frequency Register 0
+tkvar_freq0 = StringVar(window)
+tkvar_freq0.set('10000')
 
-# Create a Tkinter variable for Frequency
-tkvar_phase = StringVar(window)
-tkvar_phase.set('0')
+# Create a Tkinter variable for Frequency Register 1
+tkvar_freq1 = StringVar(window)
+tkvar_freq1.set('10000')
+
+# Create a Tkinter variable for Phase Register 0
+tkvar_phase0 = StringVar(window)
+tkvar_phase0.set('0')
+
+# Create a Tkinter variable for Phase Register 1
+tkvar_phase1 = StringVar(window)
+tkvar_phase1.set('0')
 
 # Debug Function to detect change in Waveform Dropdown
 def change_dropdown(*args):
     print( tkvar.get() )
 
-# Debug Function to print contents of freq text box on button click
-def clicked_freq(*args):
+# Helper Function to print contents of freq text box on button click
+def clicked_freq0(*args):
     freq = txt_freq.get()
-    if freq == '':
+    if freq == '': # Add a check for numeric input
         print( "No freq input; not updated")
     else:
-        tkvar_freq.set(freq)
-    print( tkvar_freq.get() )
+        tkvar_freq0.set(freq)
+    print( "freq0 " + tkvar_freq0.get() )
 
-# Debug Function to print contents of freq text box on button click
-def clicked_phase(*args):
+# Helper Function to print contents of freq text box on button click
+def clicked_freq1(*args):
+    freq = txt_freq.get()
+    if freq == '': # Add a check for numeric input
+        print( "No freq input; not updated")
+    else:
+        tkvar_freq1.set(freq)
+    print( "freq1 " + tkvar_freq1.get() )
+
+# Helper Function to Set contents of phase0 variable on button click
+def clicked_phase0(*args):
     phase = txt_phase.get()
     if phase == '':
         print( "No phase input; not updated")
     else:
-        tkvar_phase.set(phase)
-    print( tkvar_phase.get() )
+        tkvar_phase0.set(phase)
+    print( "phase0 " + tkvar_phase0.get() )
+
+# Helper Function to Set contents of phase1 variable on button click
+def clicked_phase1(*args):
+    phase = txt_phase.get()
+    if phase == '':
+        print( "No phase input; not updated")
+    else:
+        tkvar_phase1.set(phase)
+    print( "phase1 " + tkvar_phase1.get() )
 
 # Debug Function to print contents of waveform and freq:
 def clicked_waveform(*args):
-    clicked_freq()
-    clicked_phase()
-    freq = tkvar_freq.get()
+    clicked_freq0()
+    clicked_phase0()
+    freq = tkvar_freq0.get()
     wave = tkvar.get()
-    phas = tkvar_phase.get()
+    phas = tkvar_phase0.get()
     print( wave + " " + freq + " " + phas ) 
 
-# Row 1
+### Row 1 ###
 # Create a Label and a Dropdown Menu for Waveform Selection
 wfm_label = Label(mainframe, text="Waveform")
 wfm_label.grid(row=1, column=1, sticky="w")
@@ -68,7 +94,7 @@ btn_func.bind('<Button-1>', clicked_waveform)
 
 tkvar.trace('w', change_dropdown) # link function to change dropdown
 
-# Row 2
+### Row 2 ###
 # Create a Label, Entry Box, and Button for frequency selection
 freq_label = Label(mainframe, text="Frequency (Hz)")
 freq_label.grid(row=2, column=1, sticky="w")
@@ -76,11 +102,16 @@ freq_label.grid(row=2, column=1, sticky="w")
 txt_freq = Entry(mainframe, width=10)
 txt_freq.grid(row=2, column=2)
 
-btn_freq = Button(mainframe, text="Set Freq0", width=10)
-btn_freq.grid(row=2, column=3, sticky="ew")
-btn_freq.bind('<Button-1>', clicked_freq)
+btn_freq0 = Button(mainframe, text="Set Freq0", width=10)
+btn_freq0.grid(row=2, column=3, sticky="ew")
+btn_freq0.bind('<Button-1>', clicked_freq0)
 
-# Row 3
+btn_freq1 = Button(mainframe, text="Set Freq1", width=10)
+btn_freq1.grid(row=2, column=4, sticky="ew")
+btn_freq1.bind('<Button-1>', clicked_freq1)
+
+
+### Row 3 ###
 # Create a Label, Entry Box, and Button for phase selection
 phase_label = Label(mainframe, text="Phase (deg)")
 phase_label.grid(row=3, column=1, sticky="w")
@@ -88,9 +119,13 @@ phase_label.grid(row=3, column=1, sticky="w")
 txt_phase = Entry(mainframe, width=10)
 txt_phase.grid(row=3, column=2)
 
-btn_phase = Button(mainframe, text="Set Phase0", width=10)
-btn_phase.grid(row=3, column=3, sticky="ew")
-btn_phase.bind('<Button-1>', clicked_phase)
+btn_phase0 = Button(mainframe, text="Set Phase0", width=10)
+btn_phase0.grid(row=3, column=3, sticky="ew")
+btn_phase0.bind('<Button-1>', clicked_phase0)
+
+btn_phase1 = Button(mainframe, text="Set Phase1", width=10)
+btn_phase1.grid(row=3, column=4, sticky="ew")
+btn_phase1.bind('<Button-1>', clicked_phase1)
 
 # Start Window Superloop
 window.mainloop()
