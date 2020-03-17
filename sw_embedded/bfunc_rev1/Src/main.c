@@ -51,6 +51,7 @@
 #include "stm32f0xx_hal.h"
 #include "usb_device.h"
 #include "usbd_cdc_if.h"
+#include <string.h>
 
 /* USER CODE BEGIN Includes */
 
@@ -123,6 +124,40 @@ union ad9837_phase_set {
     uint8_t data[2];
 };
 
+
+/*	
+typedef struct command {
+	char	cmd[10];
+	void	(*func)	(void);
+};
+
+#define MAX_PARMS 5
+char *parms[MAX_PARMS];
+struct command commands[] = {
+	{"rd",		Cmd_RD},
+	{"rdw",		Cmd_RDW}
+	{"wr",		Cmd_WR},
+	{"l",		Cmd_L},
+	{"p",		Cmd_P},
+	{"regs",	Cmd_REGS},
+	{"io",		Cmd_IO},
+	{"f",		Cmd_F},
+	{"sp",		Cmd_SP},
+	{"per",		Cmd_PER},
+	{"watch",	Cmd_WATCH},
+	{"rst",		Cmd_RST},
+	{"ipc",		Cmd_IPC},
+	{"set",		Cmd_SET},
+	{"dig",		Cmd_DIG},
+	{"an",		Cmd_AN},
+	{"pin",		Cmd_PIN},
+	{"pc",		Cmd_PC},
+	{"info",	Cmd_INFO},
+	{"/",		Cmd_HELP}
+};
+	*/
+
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -133,16 +168,18 @@ static void MX_TIM1_Init(void);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
-void InitCtrlAD9837(union ad9837_dds_ctrl *dds_control);
-void StartOutput(union ad9837_dds_ctrl *dds_control);
-void StopOutput(union ad9837_dds_ctrl *dds_control);
-void SetFreq0Value(uint32_t freq);
-void SetFreq1Value(uint32_t freq);
-void SetPhase0Value(uint16_t phase);
-void SetPhase1Value(uint16_t phase);
-void SetWaveformMode(enum   states          current_state,
-                     union  ad9837_dds_ctrl *dds_control);
-enum states NextState(enum states CurrentState);
+void InitCtrlAD9837(	union ad9837_dds_ctrl *dds_control);
+void StartOutput(		union ad9837_dds_ctrl *dds_control);
+void StopOutput(		union ad9837_dds_ctrl *dds_control);
+void SetFreq0Value(		uint32_t freq);
+void SetFreq1Value(		uint32_t freq);
+void SetPhase0Value(	uint16_t phase);
+void SetPhase1Value(	uint16_t phase);
+void SetWaveformMode(	enum   states          current_state,
+						union  ad9837_dds_ctrl *dds_control);
+
+enum states NextState(	enum states CurrentState);
+void ProcessCommand(	uint8_t *cmd_buffer);
 
 
 /* USER CODE END PFP */
@@ -188,6 +225,7 @@ int main(void)
   //AFIO->MAPR = AFIO_MAPR_SWJ_CFG_JTAGDISABLE; 
 
   enum states current_state = IDLE;
+  enum states next_state	= IDLE;
   union ad9837_dds_ctrl dds_control;
 
   InitCtrlAD9837(&dds_control);
@@ -198,10 +236,16 @@ int main(void)
 
   //uint8_t   *head_parse_target  = UserRxBufferFS;
   //uint8_t   *tail_parse_target  = UserRxBufferFS;
-  uint8_t   parse_buffer[64];
-  uint8_t   *head_parse_target  = parse_buffer;
-  uint8_t   *tail_parse_target  = parse_buffer;
+  uint8_t			 cmd_buffer[64];
+  char				 c;
+  uint8_t			 cmd_buffer_index = 0;
+  extern volatile uint8_t   usb_packet_flag;
 
+  //Initialize cmd_buffer
+  for (c = 0; c < 64; c++) {
+	  cmd_buffer[(uint8_t)c] = 0;
+  }
+  c = '\0';
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -212,46 +256,77 @@ int main(void)
 
 	switch(UserRxBufferFS[0]) {
 		case 'q':
-			current_state = WFM_OUT_SQUARE;
+			next_state = WFM_OUT_SQUARE;
 			break;
 		case 's':
-			current_state = WFM_OUT_SINE;
+			next_state = WFM_OUT_SINE;
 			break;
 		case 't':
-			current_state = WFM_OUT_TRIANGLE;
+			next_state = WFM_OUT_TRIANGLE;
 			break;
 		case 'i':
-			current_state = IDLE;
+			next_state = IDLE;
 			break;
 		default:
 			break;
 	}
 
-	/*
-    for (int i = 0; i < APP_RX_DATA_SIZE; i++) {
-        if (UserRxBufferFS[i] == '@') {
-            head_parse_target = &UserRxBufferFS[i];
-        }
-        if (UserRxBufferFS[i] == '\r') {
-            tail_parse_target = &UserRxBufferFS[i];
-            CDC_Transmit_FS(head_parse_target,
-                            (tail_parse_target-head_parse_target));
-        }
-    }
-	*/
+    if (usb_packet_flag) {
+	    c = UserRxBufferFS[0];
+	    switch (c) 
+	    {
+			
+		    //case TAB:  // TAB runs the last command
+	        //	memcpy(cmd_buffer, last_cmd, sizeof(cmd_buffer));
+	    		//ProcessCommand ();
+	    	//	break;
+	    	case '\b':	// Backspace
+	    		if (cmd_buffer_index > 0) {
+	    			cmd_buffer[--cmd_buffer_index] = '\0';
+	    			//Serial << _BYTE(BACKSPACE) << SPACE << _BYTE(BACKSPACE);
+	    		}
+	    		break;
+	    	
+	    	case '\n':	// Newline
+	    		ProcessCommand(cmd_buffer);
+	    		cmd_buffer_index = 0;
+	    		cmd_buffer[cmd_buffer_index] = '\0';
+	    		//Serial.flush();		// remove any following CR
+	    		break;
 
-	HAL_Delay(500);
+	    	case '\r':	// Carriage return
+	    		ProcessCommand(cmd_buffer);
+	    		cmd_buffer_index = 0;
+	    		cmd_buffer[cmd_buffer_index] = '\0';
+	    		//Serial.flush();		// remove any following LF
+	    		break;
+	    	
+	    	default:	// just put the char in the buffer
+	    		cmd_buffer[cmd_buffer_index++] = c;
+	    		cmd_buffer[cmd_buffer_index] = '\0';
+	    		//CDC_Transmit_FS((uint8_t *)&c, 1);
+	    		//Serial.print (c);
+	    		break;
+	    }
+		usb_packet_flag = 0;
+	}
+	
+
+	//HAL_Delay(500);
     //current_state = NextState(current_state);
+	if (next_state != current_state) {
+        SetWaveformMode(next_state, &dds_control);
+		current_state = next_state;	
+	}
 
     if (current_state == IDLE) {
         StopOutput(&dds_control);
     } else {
-        SetWaveformMode(current_state, &dds_control);
         StartOutput(&dds_control);
     }
 
     GPIOC->BSRR = GPIO_BSRR_BR_13;
-	HAL_Delay(500);
+	//HAL_Delay(500);
 
   }
   /* USER CODE END 3 */
@@ -526,11 +601,16 @@ void SetWaveformMode(enum   states          current_state,
                              1,
                              10);
             break;
+		case IDLE:
+			StopOutput(dds_control);
+			break;
         default:
 	        break;
     }
 }
 
+// Helper function that just cycles through the states 
+// available to the waveform generator
 enum states NextState(enum states CurrentState)
 {
     switch (CurrentState) {
@@ -550,6 +630,41 @@ enum states NextState(enum states CurrentState)
             return IDLE;
             break;
     }
+}
+
+void ProcessCommand(uint8_t *cmd_buffer) 
+{
+	char delim = ' ';
+	uint8_t *ptr_split = (uint8_t *)strtok((char *)cmd_buffer, &delim);
+	uint8_t result;
+	uint8_t length;
+
+	// Prints a newline so it's separate from cmd buffer
+	result = CDC_Transmit_FS((uint8_t *)"\n\r", 2);
+	while (result == USBD_BUSY) {
+		result = CDC_Transmit_FS((uint8_t *)"\n\r", 2);
+	}
+
+	while (ptr_split != NULL) {
+		// Transmits tokenized string; retries if USB peripheral is busy
+		length = strlen((char *)ptr_split);
+		result = CDC_Transmit_FS(ptr_split, length);
+		while (result == USBD_BUSY) {
+			result = CDC_Transmit_FS(ptr_split, length);
+		}
+
+		// Transmits newlines; retries if USB peripheral is busy
+		result = CDC_Transmit_FS((uint8_t *)"\n\r", 2);
+		while (result == USBD_BUSY) {
+			result = CDC_Transmit_FS((uint8_t *)"\n\r", 2);
+		}
+		ptr_split = (uint8_t *)strtok(NULL, &delim);
+	}
+
+	result = CDC_Transmit_FS((uint8_t *) "$> ", 3);
+	while (result == USBD_BUSY) {
+		result = CDC_Transmit_FS((uint8_t *) "$> ", 3);
+	}
 }
 
 /* USER CODE END 4 */
