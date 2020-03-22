@@ -124,38 +124,24 @@ union ad9837_phase_set {
     uint8_t data[2];
 };
 
-
-/*	
-typedef struct command {
+struct command {
 	char	cmd[10];
-	void	(*func)	(void);
+	enum states state;
 };
 
-#define MAX_PARMS 5
+#define MAX_PARMS 4
 char *parms[MAX_PARMS];
 struct command commands[] = {
-	{"rd",		Cmd_RD},
-	{"rdw",		Cmd_RDW}
-	{"wr",		Cmd_WR},
-	{"l",		Cmd_L},
-	{"p",		Cmd_P},
-	{"regs",	Cmd_REGS},
-	{"io",		Cmd_IO},
-	{"f",		Cmd_F},
-	{"sp",		Cmd_SP},
-	{"per",		Cmd_PER},
-	{"watch",	Cmd_WATCH},
-	{"rst",		Cmd_RST},
-	{"ipc",		Cmd_IPC},
-	{"set",		Cmd_SET},
-	{"dig",		Cmd_DIG},
-	{"an",		Cmd_AN},
-	{"pin",		Cmd_PIN},
-	{"pc",		Cmd_PC},
-	{"info",	Cmd_INFO},
-	{"/",		Cmd_HELP}
-};
+	{"sine",		WFM_OUT_SINE},
+	{"square",		WFM_OUT_SQUARE},
+	{"triangle",	WFM_OUT_TRIANGLE},
+	{"idle",		IDLE}
+	/*
+	{"freq",		Placeholder},
+	{"phase",		Placeholder}
 	*/
+};
+	
 
 
 /* USER CODE END PV */
@@ -180,7 +166,7 @@ void SetWaveformMode(	enum   states          current_state,
 
 enum states NextState(	enum states CurrentState);
 void ProcessCommand(	uint8_t *cmd_buffer);
-
+void Placeholder( void );
 
 /* USER CODE END PFP */
 
@@ -255,7 +241,7 @@ int main(void)
     GPIOC->BSRR = GPIO_BSRR_BS_13;
 
 	switch(UserRxBufferFS[0]) {
-		case 'q':
+		case 'y':
 			next_state = WFM_OUT_SQUARE;
 			break;
 		case 's':
@@ -275,15 +261,9 @@ int main(void)
 	    c = UserRxBufferFS[0];
 	    switch (c) 
 	    {
-			
-		    //case TAB:  // TAB runs the last command
-	        //	memcpy(cmd_buffer, last_cmd, sizeof(cmd_buffer));
-	    		//ProcessCommand ();
-	    	//	break;
 	    	case '\b':	// Backspace
 	    		if (cmd_buffer_index > 0) {
 	    			cmd_buffer[--cmd_buffer_index] = '\0';
-	    			//Serial << _BYTE(BACKSPACE) << SPACE << _BYTE(BACKSPACE);
 	    		}
 	    		break;
 	    	
@@ -291,27 +271,23 @@ int main(void)
 	    		ProcessCommand(cmd_buffer);
 	    		cmd_buffer_index = 0;
 	    		cmd_buffer[cmd_buffer_index] = '\0';
-	    		//Serial.flush();		// remove any following CR
 	    		break;
 
 	    	case '\r':	// Carriage return
 	    		ProcessCommand(cmd_buffer);
 	    		cmd_buffer_index = 0;
 	    		cmd_buffer[cmd_buffer_index] = '\0';
-	    		//Serial.flush();		// remove any following LF
 	    		break;
 	    	
-	    	default:	// just put the char in the buffer
+	    	default:	// any other char; appends char to buffer
 	    		cmd_buffer[cmd_buffer_index++] = c;
 	    		cmd_buffer[cmd_buffer_index] = '\0';
-	    		//CDC_Transmit_FS((uint8_t *)&c, 1);
-	    		//Serial.print (c);
 	    		break;
 	    }
 		usb_packet_flag = 0;
 	}
 	
-
+	// Uncomment the two lines below to iterate thru wfm states
 	//HAL_Delay(500);
     //current_state = NextState(current_state);
 	if (next_state != current_state) {
@@ -515,15 +491,17 @@ void SetFreq0Value(uint32_t freq)
 void SetFreq1Value(uint32_t freq)
 {
     union ad9837_freq_set freq1;
-    freq1.reg.freqreg = 2;
-    freq1.reg.freqset = (unsigned int)(freq & 0x00003fff);
+    
     // Note: All SPI transactions are len=1, but 
     // require a 2 byte input due to the peripheral being 
     // in 16-bit output mode
    
-    // Sets 14 LSBs of Freq0 register
+	// Sets 14 LSBs of Freq0 register
+    freq1.reg.freqreg = 2;
+    freq1.reg.freqset = (unsigned int)(freq & 0x00003fff);
     HAL_SPI_Transmit(&hspi1, freq1.data, 1, 10);
-    // Sets 14 MSBs of Freq0 register
+    
+	// Sets 14 MSBs of Freq0 register
     freq1.reg.freqreg = 1;
     freq1.reg.freqset = (unsigned int)((freq & 0x0fffc000) >> 14);
     HAL_SPI_Transmit(&hspi1, freq1.data, 1, 10);
@@ -551,7 +529,8 @@ void StartOutput(union ad9837_dds_ctrl *dds_control) {
     // Note: All SPI transactions are len=1, but 
     // require a 2 byte input due to the peripheral being 
     // in 16-bit output mode
-    dds_control->reg.reset = 0;
+    dds_control->reg.reset	 = 0;
+    dds_control->reg.sleep12 = 0;
     HAL_SPI_Transmit(&hspi1,
                      dds_control->data, 1, 10);
 }
@@ -561,7 +540,8 @@ void StopOutput(union ad9837_dds_ctrl *dds_control)
     // Note: All SPI transactions are len=1, but 
     // require a 2 byte input due to the peripheral being 
     // in 16-bit output mode
-    dds_control->reg.reset = 1;
+    dds_control->reg.reset   = 1;
+    dds_control->reg.sleep12 = 1;
     HAL_SPI_Transmit(&hspi1,
                      dds_control->data, 1, 10);
 }
@@ -635,9 +615,31 @@ enum states NextState(enum states CurrentState)
 void ProcessCommand(uint8_t *cmd_buffer) 
 {
 	char delim = ' ';
-	uint8_t *ptr_split = (uint8_t *)strtok((char *)cmd_buffer, &delim);
+	uint8_t position = 0;
+	uint8_t *parms[10];
+
 	uint8_t result;
 	uint8_t length;
+	
+	uint32_t frequency;
+	uint16_t phase;
+	enum states new_wfm_state;
+
+	// Zero parameter array
+	for (position = 0; position < 10; position++) {
+		parms[position] = 0;
+	}
+
+	// Split all params by delimiter; adds NULL to final position
+	position = 0;
+	uint8_t *ptr_split = (uint8_t *)strtok((char *)cmd_buffer, &delim);
+	while (ptr_split != NULL) {
+		parms[position] = ptr_split;
+		ptr_split = (uint8_t *)strtok(NULL, &delim);
+		position++;
+	}
+	parms[position] = NULL;
+	position = 0;
 
 	// Prints a newline so it's separate from cmd buffer
 	result = CDC_Transmit_FS((uint8_t *)"\n\r", 2);
@@ -645,22 +647,60 @@ void ProcessCommand(uint8_t *cmd_buffer)
 		result = CDC_Transmit_FS((uint8_t *)"\n\r", 2);
 	}
 
-	while (ptr_split != NULL) {
-		// Transmits tokenized string; retries if USB peripheral is busy
-		length = strlen((char *)ptr_split);
-		result = CDC_Transmit_FS(ptr_split, length);
+	// Prints the contents of the parms array
+	while (parms[position] != NULL) {
+		length = strlen((char *)parms[position]);
+		result = CDC_Transmit_FS(parms[position], length);
 		while (result == USBD_BUSY) {
-			result = CDC_Transmit_FS(ptr_split, length);
+			result = CDC_Transmit_FS(parms[position], length);
 		}
 
-		// Transmits newlines; retries if USB peripheral is busy
+		// Prints a newline so it's separate from cmd buffer
 		result = CDC_Transmit_FS((uint8_t *)"\n\r", 2);
 		while (result == USBD_BUSY) {
 			result = CDC_Transmit_FS((uint8_t *)"\n\r", 2);
 		}
-		ptr_split = (uint8_t *)strtok(NULL, &delim);
+
+		position++;
 	}
 
+	// This is where the command parsing should happen
+	if ( (strcmp((char *)parms[0], "sine")		== 0) ||
+		 (strcmp((char *)parms[0], "triangle")	== 0) ||
+		 (strcmp((char *)parms[0], "square")	== 0) ) 
+	{
+		// use atoi(parms[1]) as frequency
+		frequency = 17 * (uint32_t)atoi((char *)parms[1]);
+		// use atoi(parms[2]) as phase
+		phase = atoi((char *)parms[2]);
+	} 
+	else if (	(strcmp((char *)parms[0], "freq0")	== 0) )
+	{
+		// use atoi(parms[1]) as freq0 setting
+		// multiplying by 17 gets to freq needed by AD9837 FREQREG
+		frequency = 17 * (uint32_t)atoi((char *)parms[1]);
+		SetFreq0Value(frequency);
+	}
+	else if (	(strcmp((char *)parms[0], "freq1")	== 0) )
+	{
+		// use atoi(parms[1]) as freq1 setting
+		// multiplying by 17 gets to freq needed by AD9837 FREQREG
+		frequency = 17 * (uint32_t)atoi((char *)parms[1]);
+		SetFreq1Value(frequency);
+	}
+	else if (	(strcmp((char *)parms[0], "phase0")	== 0) )
+	{
+		// use atoi(parms[1]) as phase0 setting
+	}
+	else if (	(strcmp((char *)parms[0], "phase1")	== 0) )
+	{
+		// use atoi(parms[1]) as phase1 setting
+	}
+	else if ( (strcmp((char *)parms[0], "idle")	== 0) ) {
+		// stop output
+	}
+
+	// Transmits shell prompt
 	result = CDC_Transmit_FS((uint8_t *) "$> ", 3);
 	while (result == USBD_BUSY) {
 		result = CDC_Transmit_FS((uint8_t *) "$> ", 3);
