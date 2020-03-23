@@ -30,6 +30,8 @@ for port in comports():
 choices_ports = set(choices_ports)
 tkvar_port.set(' ') # set the default option
 
+# Create a Tkinter variable for Mode Selection
+
 # Create a Tkinter variable for Frequency Register 0
 tkvar_freq0 = StringVar(window)
 tkvar_freq0.set('10000')
@@ -46,6 +48,16 @@ tkvar_phase0.set('0')
 tkvar_phase1 = StringVar(window)
 tkvar_phase1.set('0')
 
+# Create a Tkinter variable for Output Mode
+choices_mode = [
+    ("Waveform", "wave"),
+    ("Modulation", "modulate")
+]
+
+tkvar_outmode = StringVar(window)
+tkvar_outmode.set("wave")
+
+
 # Initializes pyserial object
 ser = serial.Serial()
 
@@ -56,6 +68,17 @@ def change_wave_dropdown(*args):
 # Debug Function to detect change in Serial Port Dropdown
 def change_port_dropdown(*args):
     print( tkvar_port.get() )
+
+# Debug Function to detect change in radiobutton state
+def change_outmode_radio(*args):
+    new_mode = tkvar_outmode.get()
+    if new_mode == "wave": # Disable freq1/phase1 buttons
+        btn_freq1['state']  = "disabled"
+        btn_phase1['state'] = "disabled"
+    elif new_mode == "modulate": # Enable freq1/phase1 buttons
+        btn_freq1['state']  = "normal"
+        btn_phase1['state'] = "normal"
+    print( new_mode )
 
 # Helper Function to print contents of freq text box on button click
 def clicked_freq0(*args):
@@ -121,9 +144,11 @@ wfm_label.grid(row=2, column=1, sticky="w")
 popupMenu_wave = OptionMenu(mainframe, tkvar_wave, *choices_wave)
 popupMenu_wave.grid(row=2, column=2, sticky="ew")
 
-btn_func = Button(mainframe, text="Set Waveform", width=12)
+btn_func = Button(mainframe, 
+                  text="Set Waveform", 
+                  width=12,
+                  command=clicked_waveform)
 btn_func.grid(row=2, column=3, sticky="ew")
-btn_func.bind('<Button-1>', clicked_waveform)
 
 tkvar_wave.trace('w', change_wave_dropdown) # link function to change dropdown
 
@@ -135,14 +160,18 @@ freq_label.grid(row=3, column=1, sticky="w")
 txt_freq = Entry(mainframe, width=10)
 txt_freq.grid(row=3, column=2)
 
-btn_freq0 = Button(mainframe, text="Set Freq0", width=10)
+btn_freq0 = Button(mainframe, 
+                   text="Set Freq0", 
+                   width=10,
+                   command=clicked_freq0)
 btn_freq0.grid(row=3, column=3, sticky="ew")
-btn_freq0.bind('<Button-1>', clicked_freq0)
 
-btn_freq1 = Button(mainframe, text="Set Freq1", width=10)
+btn_freq1 = Button(mainframe, 
+                   text="Set Freq1", 
+                   width=10,
+                   command=clicked_freq1)
 btn_freq1.grid(row=3, column=4, sticky="ew")
-btn_freq1.bind('<Button-1>', clicked_freq1)
-
+btn_freq1['state']  = "disabled" # Freq1 disabled in waveform mode
 
 ### Row 4 ###
 # Create a Label, Entry Box, and Button for phase selection
@@ -152,13 +181,34 @@ phase_label.grid(row=4, column=1, sticky="w")
 txt_phase = Entry(mainframe, width=10)
 txt_phase.grid(row=4, column=2)
 
-btn_phase0 = Button(mainframe, text="Set Phase0", width=10)
+btn_phase0 = Button(mainframe, 
+                    text="Set Phase0", 
+                    width=10,
+                    command=clicked_phase0)
 btn_phase0.grid(row=4, column=3, sticky="ew")
-btn_phase0.bind('<Button-1>', clicked_phase0)
 
-btn_phase1 = Button(mainframe, text="Set Phase1", width=10)
+btn_phase1 = Button(mainframe, 
+                    text="Set Phase1", 
+                    width=10,
+                    command=clicked_phase1)
 btn_phase1.grid(row=4, column=4, sticky="ew")
-btn_phase1.bind('<Button-1>', clicked_phase1)
+btn_phase1['state'] = "disabled" # Phase1 disabled in waveform mode
+
+### Row 5 ###
+# Create a Label and radio buttons for output mode selection
+startrow = 6
+phase_label = Label(mainframe, text="Output Mode")
+phase_label.grid(row=startrow, column=1, sticky="w")
+startrow += 1 
+for text, mode in choices_mode:
+    b = Radiobutton(mainframe,
+                    text=text,
+                    variable=tkvar_outmode,
+                    value=mode)
+    b.grid(row=startrow, column=1, sticky="w")
+    startrow += 1
+
+tkvar_outmode.trace('w', change_outmode_radio) # Link radiobuttons to change function
 
 # Start Window Superloop
 print(choices_wave)
