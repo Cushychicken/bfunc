@@ -165,7 +165,8 @@ void SetWaveformMode(	enum   states          current_state,
 						union  ad9837_dds_ctrl *dds_control);
 
 enum states NextState(	enum states CurrentState);
-void ProcessCommand(	uint8_t *cmd_buffer);
+void ProcessCommand(	uint8_t *cmd_buffer, 
+						union ad9837_dds_ctrl *dds_control);
 void Placeholder( void );
 
 /* USER CODE END PFP */
@@ -214,14 +215,12 @@ int main(void)
   enum states next_state	= IDLE;
   union ad9837_dds_ctrl dds_control;
 
+  // Initializing AD9837 as per ADI App Note AN-1070
   InitCtrlAD9837(&dds_control);
 
-  // Initializing AD9837 as per ADI App Note AN-1070
   SetFreq0Value(0x00002000);
   SetPhase0Value(0x00FF);
 
-  //uint8_t   *head_parse_target  = UserRxBufferFS;
-  //uint8_t   *tail_parse_target  = UserRxBufferFS;
   uint8_t			 cmd_buffer[64];
   char				 c;
   uint8_t			 cmd_buffer_index = 0;
@@ -240,6 +239,7 @@ int main(void)
   {
     GPIOC->BSRR = GPIO_BSRR_BS_13;
 
+	/*
 	switch(UserRxBufferFS[0]) {
 		case 'y':
 			next_state = WFM_OUT_SQUARE;
@@ -256,6 +256,7 @@ int main(void)
 		default:
 			break;
 	}
+	*/
 
     if (usb_packet_flag) {
 	    c = UserRxBufferFS[0];
@@ -268,13 +269,13 @@ int main(void)
 	    		break;
 	    	
 	    	case '\n':	// Newline
-	    		ProcessCommand(cmd_buffer);
+	    		ProcessCommand(cmd_buffer, &dds_control);
 	    		cmd_buffer_index = 0;
 	    		cmd_buffer[cmd_buffer_index] = '\0';
 	    		break;
 
 	    	case '\r':	// Carriage return
-	    		ProcessCommand(cmd_buffer);
+	    		ProcessCommand(cmd_buffer, &dds_control);
 	    		cmd_buffer_index = 0;
 	    		cmd_buffer[cmd_buffer_index] = '\0';
 	    		break;
@@ -290,16 +291,20 @@ int main(void)
 	// Uncomment the two lines below to iterate thru wfm states
 	//HAL_Delay(500);
     //current_state = NextState(current_state);
+	/*
 	if (next_state != current_state) {
         SetWaveformMode(next_state, &dds_control);
 		current_state = next_state;	
 	}
+	*/
 
+	/*
     if (current_state == IDLE) {
         StopOutput(&dds_control);
     } else {
         StartOutput(&dds_control);
     }
+	*/
 
     GPIOC->BSRR = GPIO_BSRR_BR_13;
 	//HAL_Delay(500);
@@ -559,6 +564,7 @@ void SetWaveformMode(enum   states          current_state,
                              dds_control->data,
                              1,
                              10);
+			StartOutput(dds_control);
             break;
         case WFM_OUT_TRIANGLE:
             // Sets MODE bit; clears OPBITEN
@@ -569,6 +575,7 @@ void SetWaveformMode(enum   states          current_state,
                              dds_control->data,
                              1,
                              10);
+			StartOutput(dds_control);
             break;
         case WFM_OUT_SQUARE:
             // Sets OPBITEN;
@@ -580,6 +587,7 @@ void SetWaveformMode(enum   states          current_state,
                              dds_control->data,
                              1,
                              10);
+			StartOutput(dds_control);
             break;
 		case IDLE:
 			StopOutput(dds_control);
@@ -612,7 +620,8 @@ enum states NextState(enum states CurrentState)
     }
 }
 
-void ProcessCommand(uint8_t *cmd_buffer) 
+void ProcessCommand(uint8_t *cmd_buffer, 
+					union ad9837_dds_ctrl *dds_control) 
 {
 	char delim = ' ';
 	uint8_t position = 0;
@@ -664,16 +673,64 @@ void ProcessCommand(uint8_t *cmd_buffer)
 		position++;
 	}
 
-	// This is where the command parsing should happen
-	if ( (strcmp((char *)parms[0], "sine")		== 0) ||
-		 (strcmp((char *)parms[0], "triangle")	== 0) ||
-		 (strcmp((char *)parms[0], "square")	== 0) ) 
+	// This is where the command parsing happens
+	if ( (strcmp((char *)parms[0], "sine")		== 0) )
 	{
 		// use atoi(parms[1]) as frequency
-		frequency = 17 * (uint32_t)atoi((char *)parms[1]);
+		// Is not called if there is no parms[1]
+		if (position > 1) {
+			frequency = 17 * (uint32_t)atoi((char *)parms[1]);
+			SetFreq0Value(frequency);
+		}
+
 		// use atoi(parms[2]) as phase
-		phase = atoi((char *)parms[2]);
+		// Is not called if there is no parms[2]
+		if (position > 2) {
+			phase = atoi((char *)parms[2]);
+			SetPhase0Value(phase);
+		}
+	
+		// Sets waveform state, starts DDS output 
+		SetWaveformMode(WFM_OUT_SINE, dds_control);
 	} 
+	else if ((strcmp((char *)parms[0], "triangle")	== 0) )
+	{
+		// use atoi(parms[1]) as frequency
+		// Is not called if there is no parms[1]
+		if (position > 1) {
+			frequency = 17 * (uint32_t)atoi((char *)parms[1]);
+			SetFreq0Value(frequency);
+		}
+
+		// use atoi(parms[2]) as phase
+		// Is not called if there is no parms[2]
+		if (position > 2) {
+			phase = atoi((char *)parms[2]);
+			SetPhase0Value(phase);
+		}
+	
+		// Sets waveform state, starts DDS output 
+		SetWaveformMode(WFM_OUT_TRIANGLE, dds_control);
+	}
+	else if ((strcmp((char *)parms[0], "square")	== 0) )
+	{
+		// use atoi(parms[1]) as frequency
+		// Is not called if there is no parms[1]
+		if (position > 1) {
+			frequency = 17 * (uint32_t)atoi((char *)parms[1]);
+			SetFreq0Value(frequency);
+		}
+
+		// use atoi(parms[2]) as phase
+		// Is not called if there is no parms[2]
+		if (position > 2) {
+			phase = atoi((char *)parms[2]);
+			SetPhase0Value(phase);
+		}
+	
+		// Sets waveform state, starts DDS output 
+		SetWaveformMode(WFM_OUT_SQUARE, dds_control);
+	}
 	else if (	(strcmp((char *)parms[0], "freq0")	== 0) )
 	{
 		// use atoi(parms[1]) as freq0 setting
@@ -698,6 +755,7 @@ void ProcessCommand(uint8_t *cmd_buffer)
 	}
 	else if ( (strcmp((char *)parms[0], "idle")	== 0) ) {
 		// stop output
+		SetWaveformMode(IDLE, dds_control);
 	}
 
 	// Transmits shell prompt
