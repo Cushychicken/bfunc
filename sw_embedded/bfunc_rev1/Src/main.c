@@ -219,9 +219,9 @@ int main(void)
   InitCtrlAD9837(&dds_control);
 
 
-  uint8_t			 cmd_buffer[64];
-  char				 c;
-  uint8_t			 cmd_buffer_index = 0;
+  uint8_t					cmd_buffer[64];
+  char						c;
+  uint8_t					cmd_buffer_index = 0;
   extern volatile uint8_t   usb_packet_flag;
 
   //Initialize cmd_buffer
@@ -235,27 +235,10 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    GPIOC->BSRR = GPIO_BSRR_BS_13;
+	// Start-of-superloop blinky 
+	GPIOC->BSRR = GPIO_BSRR_BS_13;
 
-	/*
-	switch(UserRxBufferFS[0]) {
-		case 'y':
-			next_state = WFM_OUT_SQUARE;
-			break;
-		case 's':
-			next_state = WFM_OUT_SINE;
-			break;
-		case 't':
-			next_state = WFM_OUT_TRIANGLE;
-			break;
-		case 'i':
-			next_state = IDLE;
-			break;
-		default:
-			break;
-	}
-	*/
-
+	// Main Serial Buffer Input Loop
     if (usb_packet_flag) {
 	    c = UserRxBufferFS[0];
 	    switch (c) 
@@ -285,28 +268,9 @@ int main(void)
 	    }
 		usb_packet_flag = 0;
 	}
-	
-	// Uncomment the two lines below to iterate thru wfm states
-	//HAL_Delay(500);
-    //current_state = NextState(current_state);
-	/*
-	if (next_state != current_state) {
-        SetWaveformMode(next_state, &dds_control);
-		current_state = next_state;	
-	}
-	*/
 
-	/*
-    if (current_state == IDLE) {
-        StopOutput(&dds_control);
-    } else {
-        StartOutput(&dds_control);
-    }
-	*/
-
+	// End of superloop blinky
     GPIOC->BSRR = GPIO_BSRR_BR_13;
-	//HAL_Delay(500);
-
   }
   /* USER CODE END 3 */
 
@@ -455,6 +419,9 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+
+// Initializes all the values of the DDS Control register
+//  to a known state. 
 void InitCtrlAD9837(union ad9837_dds_ctrl *dds_control)
 {
     dds_control->reg.freqreg    = 0;
@@ -474,6 +441,7 @@ void InitCtrlAD9837(union ad9837_dds_ctrl *dds_control)
     dds_control->reg.reserved0  = 0;
 }
 
+// Sets the value of Freq0 frequency register
 void SetFreq0Value(uint32_t freq)
 {
     union ad9837_freq_set freq0;
@@ -491,6 +459,7 @@ void SetFreq0Value(uint32_t freq)
     HAL_SPI_Transmit(&hspi1, freq0.data, 1, 10);
 }
 
+// Sets the value of Freq1 frequency register
 void SetFreq1Value(uint32_t freq)
 {
     union ad9837_freq_set freq1;
@@ -510,6 +479,7 @@ void SetFreq1Value(uint32_t freq)
     HAL_SPI_Transmit(&hspi1, freq1.data, 1, 10);
 }
 
+// Sets the value of Phase0 phase register
 void SetPhase0Value(uint16_t phase)
 {
     union ad9837_phase_set phase0;
@@ -519,6 +489,7 @@ void SetPhase0Value(uint16_t phase)
     HAL_SPI_Transmit(&hspi1, phase0.data, 1, 10);
 }
 
+// Sets the value of Phase1 phase register
 void SetPhase1Value(uint16_t phase)
 {
     union ad9837_phase_set phase1;
@@ -528,6 +499,7 @@ void SetPhase1Value(uint16_t phase)
     HAL_SPI_Transmit(&hspi1, phase1.data, 1, 10);
 }
 
+// Starts the output of the DDS chip 
 void StartOutput(union ad9837_dds_ctrl *dds_control) {
     // Note: All SPI transactions are len=1, but 
     // require a 2 byte input due to the peripheral being 
@@ -538,6 +510,7 @@ void StartOutput(union ad9837_dds_ctrl *dds_control) {
                      dds_control->data, 1, 10);
 }
 
+// Stops the output of the DDS chip 
 void StopOutput(union ad9837_dds_ctrl *dds_control)
 {
     // Note: All SPI transactions are len=1, but 
@@ -549,6 +522,7 @@ void StopOutput(union ad9837_dds_ctrl *dds_control)
                      dds_control->data, 1, 10);
 }
 
+// Sets the output waveform mode of the DDS chip
 void SetWaveformMode(enum   states          current_state,
                      union  ad9837_dds_ctrl *dds_control)
 {
@@ -618,6 +592,12 @@ enum states NextState(enum states CurrentState)
     }
 }
 
+// Parsing function that takes buffered command input 
+//  and generates the proper interpreted behavior for 
+//  the bFunc board. 
+//
+//  Responsible for both command parsing and setting 
+//  frequency/phase register values. 
 void ProcessCommand(uint8_t *cmd_buffer, 
 					union ad9837_dds_ctrl *dds_control) 
 {
