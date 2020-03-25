@@ -218,8 +218,6 @@ int main(void)
   // Initializing AD9837 as per ADI App Note AN-1070
   InitCtrlAD9837(&dds_control);
 
-  SetFreq0Value(0x00002000);
-  SetPhase0Value(0x00FF);
 
   uint8_t			 cmd_buffer[64];
   char				 c;
@@ -735,23 +733,35 @@ void ProcessCommand(uint8_t *cmd_buffer,
 	{
 		// use atoi(parms[1]) as freq0 setting
 		// multiplying by 17 gets to freq needed by AD9837 FREQREG
-		frequency = 17 * (uint32_t)atoi((char *)parms[1]);
-		SetFreq0Value(frequency);
+		if (position > 1) {
+			frequency = 17 * (uint32_t)atoi((char *)parms[1]);
+			SetFreq0Value(frequency);
+		}
 	}
 	else if (	(strcmp((char *)parms[0], "freq1")	== 0) )
 	{
 		// use atoi(parms[1]) as freq1 setting
 		// multiplying by 17 gets to freq needed by AD9837 FREQREG
-		frequency = 17 * (uint32_t)atoi((char *)parms[1]);
-		SetFreq1Value(frequency);
+		if (position > 1) {
+			frequency = 17 * (uint32_t)atoi((char *)parms[1]);
+			SetFreq1Value(frequency);
+		}
 	}
 	else if (	(strcmp((char *)parms[0], "phase0")	== 0) )
 	{
 		// use atoi(parms[1]) as phase0 setting
+		if (position > 1) {
+			phase = 11 * (uint32_t)atoi((char *)parms[1]);
+			SetPhase0Value(phase);
+		}
 	}
 	else if (	(strcmp((char *)parms[0], "phase1")	== 0) )
 	{
 		// use atoi(parms[1]) as phase1 setting
+		if (position > 1) {
+			phase = 11 * (uint32_t)atoi((char *)parms[1]);
+			SetPhase1Value(phase);
+		}
 	}
 	else if ( (strcmp((char *)parms[0], "idle")	== 0) ) {
 		// stop output
