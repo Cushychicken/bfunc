@@ -124,25 +124,6 @@ union ad9837_phase_set {
     uint8_t data[2];
 };
 
-struct command {
-	char	cmd[10];
-	enum states state;
-};
-
-#define MAX_PARMS 4
-char *parms[MAX_PARMS];
-struct command commands[] = {
-	{"sine",		WFM_OUT_SINE},
-	{"square",		WFM_OUT_SQUARE},
-	{"triangle",	WFM_OUT_TRIANGLE},
-	{"idle",		IDLE}
-	/*
-	{"freq",		Placeholder},
-	{"phase",		Placeholder}
-	*/
-};
-	
-
 
 /* USER CODE END PV */
 
