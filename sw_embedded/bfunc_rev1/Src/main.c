@@ -230,6 +230,12 @@ int main(void)
 	    		}
 	    		break;
 	    	
+	    	case 0x7f:	// Backspace, on a Mac
+	    		if (cmd_buffer_index > 0) {
+	    			cmd_buffer[--cmd_buffer_index] = '\0';
+	    		}
+	    		break;
+	    	
 	    	case '\n':	// Newline
 	    		ProcessCommand(cmd_buffer, &dds_control);
 	    		cmd_buffer_index = 0;
