@@ -21,10 +21,6 @@ tkvar_wave.set('sine') # set the default option
 tkvar_port = StringVar(window)
 choices_ports = [' ']
 for port in comports():
-    # print(port[0]) # Prints human-readable port name
-    for field in port:
-        print(field)
-    print("\n")
     choices_ports.append(port[0])
 
 choices_ports = set(choices_ports)
@@ -67,7 +63,15 @@ def change_wave_dropdown(*args):
 
 # Debug Function to detect change in Serial Port Dropdown
 def change_port_dropdown(*args):
+    newport = tkvar_port.get() 
     print( tkvar_port.get() )
+    if newport != ' ':
+        if ser.is_open:
+            ser.close()
+        ser.baudrate = 115200
+        ser.port = newport
+        ser.open()
+        print ser
 
 # Debug Function to detect change in radiobutton state
 def change_outmode_radio(*args):
@@ -87,7 +91,10 @@ def clicked_freq0(*args):
         print( "No freq input; not updated")
     else:
         tkvar_freq0.set(freq)
-    print( "freq0 " + tkvar_freq0.get() )
+    sendstr = "freq0 {freq}\r\n"
+    sendstr = sendstr.format(freq=freq)
+    print(sendstr) 
+    ser.write(sendstr.encode()) 
 
 # Helper Function to print contents of freq text box on button click
 def clicked_freq1(*args):
@@ -96,7 +103,11 @@ def clicked_freq1(*args):
         print( "No freq input; not updated")
     else:
         tkvar_freq1.set(freq)
-    print( "freq1 " + tkvar_freq1.get() )
+    #print( "freq1 " + tkvar_freq1.get() )
+    sendstr = "freq1 {freq}\r\n"
+    sendstr = sendstr.format(freq=freq)
+    print(sendstr) 
+    ser.write(sendstr.encode()) 
 
 # Helper Function to Set contents of phase0 variable on button click
 def clicked_phase0(*args):
@@ -105,7 +116,11 @@ def clicked_phase0(*args):
         print( "No phase input; not updated")
     else:
         tkvar_phase0.set(phase)
-    print( "phase0 " + tkvar_phase0.get() )
+    #print( "phase0 " + tkvar_phase0.get() )
+    sendstr = "phase0 {phase}\r\n"
+    sendstr = sendstr.format(phase=phase)
+    print(sendstr) 
+    ser.write(sendstr.encode()) 
 
 # Helper Function to Set contents of phase1 variable on button click
 def clicked_phase1(*args):
@@ -115,16 +130,22 @@ def clicked_phase1(*args):
     else:
         tkvar_phase1.set(phase)
     print( "phase1 " + tkvar_phase1.get() )
+    sendstr = "phase1 {phase}\r\n"
+    sendstr = sendstr.format(phase=phase)
+    print(sendstr) 
+    ser.write(sendstr.encode()) 
 
 # Debug Function to print contents of waveform and freq:
 def clicked_waveform(*args):
-    clicked_freq0()
-    clicked_phase0()
+    #clicked_freq0()
+    #clicked_phase0()
     freq = tkvar_freq0.get()
     wave = tkvar_wave.get()
     phas = tkvar_phase0.get()
-    print( wave + " " + freq + " " + phas ) 
-
+    sendstr = "{wave} {freq} {phas}\r\n"
+    sendstr = sendstr.format(wave=wave, freq=freq, phas=phas)
+    print(sendstr) 
+    ser.write(sendstr.encode()) 
 
 ### Row 1 ###
 # Create a Label and a Dropdown Menu for Waveform Selection
