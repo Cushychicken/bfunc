@@ -203,6 +203,7 @@ int main(void)
   uint8_t					cmd_buffer[64];
   char						c;
   uint8_t					cmd_buffer_index = 0;
+  uint8_t					rcv_buffer_index = 0;
   extern volatile uint8_t   usb_packet_flag;
 
   //Initialize cmd_buffer
@@ -220,39 +221,47 @@ int main(void)
 	GPIOC->BSRR = GPIO_BSRR_BS_13;
 
 	// Main Serial Buffer Input Loop
+	//  Loops thru UserRxBufferFS, copies char into buffer, 
+	//  nulls out the same char in UserRxBufferFS
     if (usb_packet_flag) {
-	    c = UserRxBufferFS[0];
-	    switch (c) 
-	    {
-	    	case '\b':	// Backspace
-	    		if (cmd_buffer_index > 0) {
-	    			cmd_buffer[--cmd_buffer_index] = '\0';
-	    		}
-	    		break;
-	    	
-	    	case 0x7f:	// Backspace, on a Mac
-	    		if (cmd_buffer_index > 0) {
-	    			cmd_buffer[--cmd_buffer_index] = '\0';
-	    		}
-	    		break;
-	    	
-	    	case '\n':	// Newline
-	    		ProcessCommand(cmd_buffer, &dds_control);
-	    		cmd_buffer_index = 0;
-	    		cmd_buffer[cmd_buffer_index] = '\0';
-	    		break;
+		rcv_buffer_index = 0;
+		while ( UserRxBufferFS[rcv_buffer_index] != '\0' ) {
+			c = UserRxBufferFS[rcv_buffer_index];
+			UserRxBufferFS[rcv_buffer_index] = '\0';
 
-	    	case '\r':	// Carriage return
-	    		ProcessCommand(cmd_buffer, &dds_control);
-	    		cmd_buffer_index = 0;
-	    		cmd_buffer[cmd_buffer_index] = '\0';
-	    		break;
+			switch (c) 
+			{
+				case '\b':	// Backspace
+					if (cmd_buffer_index > 0) {
+						cmd_buffer[--cmd_buffer_index] = '\0';
+					}
+					break;
 	    	
-	    	default:	// any other char; appends char to buffer
-	    		cmd_buffer[cmd_buffer_index++] = c;
-	    		cmd_buffer[cmd_buffer_index] = '\0';
-	    		break;
-	    }
+				case 0x7f:	// Backspace, on a Mac
+					if (cmd_buffer_index > 0) {
+						cmd_buffer[--cmd_buffer_index] = '\0';
+					}
+					break;
+	    	
+				case '\n':	// Newline
+					ProcessCommand(cmd_buffer, &dds_control);
+					cmd_buffer_index = 0;
+					cmd_buffer[cmd_buffer_index] = '\0';
+					break;
+
+				case '\r':	// Carriage return
+					ProcessCommand(cmd_buffer, &dds_control);
+					cmd_buffer_index = 0;
+					cmd_buffer[cmd_buffer_index] = '\0';
+					break;
+	    	
+				default:	// any other char; appends char to buffer
+					cmd_buffer[cmd_buffer_index++] = c;
+					cmd_buffer[cmd_buffer_index] = '\0';
+					break;
+			}
+			rcv_buffer_index++;
+		}
 		usb_packet_flag = 0;
 	}
 
