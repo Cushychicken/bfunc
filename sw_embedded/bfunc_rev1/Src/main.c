@@ -653,14 +653,14 @@ void ProcessCommand(uint8_t *cmd_buffer,
 		// use atoi(parms[1]) as frequency
 		// Is not called if there is no parms[1]
 		if (position > 1) {
-			frequency = 17 * (uint32_t)atoi((char *)parms[1]);
+			frequency = (uint32_t)(16.777216 * (float)atoi((char *)parms[1]));
 			SetFreq0Value(frequency);
 		}
 
 		// use atoi(parms[2]) as phase
 		// Is not called if there is no parms[2]
 		if (position > 2) {
-			phase = atoi((char *)parms[2]);
+			phase = (uint16_t)(11.377774 * (float)atoi((char *)parms[2]));
 			SetPhase0Value(phase);
 		}
 	
@@ -672,14 +672,14 @@ void ProcessCommand(uint8_t *cmd_buffer,
 		// use atoi(parms[1]) as frequency
 		// Is not called if there is no parms[1]
 		if (position > 1) {
-			frequency = 17 * (uint32_t)atoi((char *)parms[1]);
+			frequency = (uint32_t)(16.777216 * (float)atoi((char *)parms[1]));
 			SetFreq0Value(frequency);
 		}
 
 		// use atoi(parms[2]) as phase
 		// Is not called if there is no parms[2]
 		if (position > 2) {
-			phase = atoi((char *)parms[2]);
+			phase = (uint16_t)(11.377774 * (float)atoi((char *)parms[2]));
 			SetPhase0Value(phase);
 		}
 	
@@ -691,14 +691,14 @@ void ProcessCommand(uint8_t *cmd_buffer,
 		// use atoi(parms[1]) as frequency
 		// Is not called if there is no parms[1]
 		if (position > 1) {
-			frequency = 17 * (uint32_t)atoi((char *)parms[1]);
+			frequency = (uint32_t)(16.777216 * (float)atoi((char *)parms[1]));
 			SetFreq0Value(frequency);
 		}
 
 		// use atoi(parms[2]) as phase
 		// Is not called if there is no parms[2]
 		if (position > 2) {
-			phase = atoi((char *)parms[2]);
+			phase = (uint16_t)(11.377774 * (float)atoi((char *)parms[2]));
 			SetPhase0Value(phase);
 		}
 	
@@ -710,7 +710,7 @@ void ProcessCommand(uint8_t *cmd_buffer,
 		// use atoi(parms[1]) as freq0 setting
 		// multiplying by 17 gets to freq needed by AD9837 FREQREG
 		if (position > 1) {
-			frequency = 17 * (uint32_t)atoi((char *)parms[1]);
+			frequency = (uint32_t)(16.777216 * (float)atoi((char *)parms[1]));
 			SetFreq0Value(frequency);
 		}
 	}
@@ -719,7 +719,7 @@ void ProcessCommand(uint8_t *cmd_buffer,
 		// use atoi(parms[1]) as freq1 setting
 		// multiplying by 17 gets to freq needed by AD9837 FREQREG
 		if (position > 1) {
-			frequency = 17 * (uint32_t)atoi((char *)parms[1]);
+			frequency = (uint32_t)(16.777216 * (float)atoi((char *)parms[1]));
 			SetFreq1Value(frequency);
 		}
 	}
@@ -727,7 +727,7 @@ void ProcessCommand(uint8_t *cmd_buffer,
 	{
 		// use atoi(parms[1]) as phase0 setting
 		if (position > 1) {
-			phase = 11 * (uint32_t)atoi((char *)parms[1]);
+			phase = (uint16_t)(11.377774 * (float)atoi((char *)parms[1]));
 			SetPhase0Value(phase);
 		}
 	}
@@ -735,7 +735,7 @@ void ProcessCommand(uint8_t *cmd_buffer,
 	{
 		// use atoi(parms[1]) as phase1 setting
 		if (position > 1) {
-			phase = 11 * (uint32_t)atoi((char *)parms[1]);
+			phase = (uint16_t)(11.377774 * (float)atoi((char *)parms[1]));
 			SetPhase1Value(phase);
 		}
 	}
