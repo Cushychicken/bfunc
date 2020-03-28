@@ -198,6 +198,10 @@ int main(void)
 
   // Initializing AD9837 as per ADI App Note AN-1070
   InitCtrlAD9837(&dds_control);
+  SetFreq0Value(0x00000000);
+  SetFreq1Value(0x00000000);
+  SetPhase0Value(0x0000);
+  SetPhase1Value(0x0000);
 
 
   uint8_t					cmd_buffer[64];
