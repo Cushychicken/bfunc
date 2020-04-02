@@ -122,7 +122,6 @@
 /* It's up to user to redefine and/or remove those define */
 /** Received data over USB are stored in this buffer      */
 uint8_t UserRxBufferFS[APP_RX_DATA_SIZE];
-volatile uint8_t usb_packet_flag = 0;
 
 /** Data to send over USB CDC are stored in this buffer   */
 uint8_t UserTxBufferFS[APP_TX_DATA_SIZE];
@@ -142,7 +141,7 @@ uint8_t UserTxBufferFS[APP_TX_DATA_SIZE];
 extern USBD_HandleTypeDef hUsbDeviceFS;
 
 /* USER CODE BEGIN EXPORTED_VARIABLES */
-
+volatile uint8_t usb_packet_flag = 0;
 /* USER CODE END EXPORTED_VARIABLES */
 
 /**
