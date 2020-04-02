@@ -50,10 +50,10 @@
 #include "main.h"
 #include "stm32f0xx_hal.h"
 #include "usb_device.h"
-#include "usbd_cdc_if.h"
-#include <string.h>
 
 /* USER CODE BEGIN Includes */
+#include "usbd_cdc_if.h"
+#include <string.h>
 
 /* USER CODE END Includes */
 
@@ -271,6 +271,10 @@ int main(void)
 
 	// End of superloop blinky
     GPIOC->BSRR = GPIO_BSRR_BR_13;
+  
+  /* USER CODE END WHILE */
+
+  /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
 
