@@ -552,6 +552,19 @@ void SetWaveformMode(enum   states          current_state,
                              10);
 			StartOutput(dds_control);
             break;
+        case WFM_OUT_SAWTOOTH:
+			// Note - this is same output setting as TRIANGLE
+
+            // Sets MODE bit; clears OPBITEN
+            dds_control->reg.opbiten = 0;
+            dds_control->reg.mode    = 1;
+            // Transmits new settings to DDS via SPI
+            HAL_SPI_Transmit(&hspi1,
+                             dds_control->data,
+                             1,
+                             10);
+			StartOutput(dds_control);
+			break;
         case WFM_OUT_SQUARE:
             // Sets OPBITEN;
             dds_control->reg.opbiten = 1;
@@ -711,6 +724,33 @@ void ProcessCommand(uint8_t *cmd_buffer,
 	
 		// Sets waveform state, starts DDS output 
 		SetWaveformMode(WFM_OUT_SQUARE, dds_control);
+	}
+	else if (	(strcmp((char *)parms[0], "sawtooth")	== 0) )
+	{
+		// use atoi(parms[1]) as frequency
+		// Is not called if there is no parms[1]
+		if (position > 1) {
+			frequency = (uint32_t)(16.777216 * (float)atoi((char *)parms[1]));
+			SetFreq0Value(frequency);
+			SetFreq1Value(frequency);
+		}
+
+		// use atoi(parms[2]) as phase
+		// Is not called if there is no parms[2]
+		if (position > 2) {
+			phase = (uint16_t)(11.377774 * (float)atoi((char *)parms[2]));
+			SetPhase0Value(phase);
+			phase = (uint16_t)(11.377774 * ((float)atoi((char *)parms[2]) + 180.0));
+			SetPhase1Value(phase);
+		} else {
+			phase = (uint16_t)(11.377774 * (float)0.0);
+			SetPhase0Value(phase);
+			phase = (uint16_t)(11.377774 * (float)180.0);
+			SetPhase1Value(phase);
+		}
+	
+		// Sets waveform state, starts DDS output 
+		//SetWaveformMode(WFM_OUT_SAWTOOTH, dds_control);
 	}
 	else if (	(strcmp((char *)parms[0], "freq0")	== 0) )
 	{
