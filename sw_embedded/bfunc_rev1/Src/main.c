@@ -508,7 +508,7 @@ void StartOutput(union ad9837_dds_ctrl *dds_control) {
     // require a 2 byte input due to the peripheral being 
     // in 16-bit output mode
     dds_control->reg.reset	 = 0;
-    dds_control->reg.sleep12 = 0;
+    //dds_control->reg.sleep12 = 0;
     HAL_SPI_Transmit(&hspi1,
                      dds_control->data, 1, 10);
 }
@@ -520,7 +520,7 @@ void StopOutput(union ad9837_dds_ctrl *dds_control)
     // require a 2 byte input due to the peripheral being 
     // in 16-bit output mode
     dds_control->reg.reset   = 1;
-    dds_control->reg.sleep12 = 1;
+    //dds_control->reg.sleep12 = 1;
     HAL_SPI_Transmit(&hspi1,
                      dds_control->data, 1, 10);
 }
@@ -725,12 +725,13 @@ void ProcessCommand(uint8_t *cmd_buffer,
 		// Sets waveform state, starts DDS output 
 		SetWaveformMode(WFM_OUT_SQUARE, dds_control);
 	}
-	else if (	(strcmp((char *)parms[0], "sawtooth")	== 0) )
+	else if ((strcmp((char *)parms[0], "sawtooth")	== 0) )
 	{
 		// use atoi(parms[1]) as frequency
 		// Is not called if there is no parms[1]
 		if (position > 1) {
 			frequency = (uint32_t)(16.777216 * (float)atoi((char *)parms[1]));
+			frequency = (uint32_t)((float)frequency / 2.0); // Needed to get freq down a step	
 			SetFreq0Value(frequency);
 			SetFreq1Value(frequency);
 		}
@@ -738,19 +739,21 @@ void ProcessCommand(uint8_t *cmd_buffer,
 		// use atoi(parms[2]) as phase
 		// Is not called if there is no parms[2]
 		if (position > 2) {
-			phase = (uint16_t)(11.377774 * (float)atoi((char *)parms[2]));
+			phase = (uint16_t)((float)atoi((char *)parms[2]) + 270.0);
+			phase = (uint16_t)(11.377774 * (float)phase);
 			SetPhase0Value(phase);
-			phase = (uint16_t)(11.377774 * ((float)atoi((char *)parms[2]) + 180.0));
+			phase = (uint16_t)((float)atoi((char *)parms[2]) + 90.0);
+			phase = (uint16_t)(11.377774 * (float)phase);
 			SetPhase1Value(phase);
 		} else {
-			phase = (uint16_t)(11.377774 * (float)0.0);
+			phase = (uint16_t)(11.377774 * 270.0);
 			SetPhase0Value(phase);
-			phase = (uint16_t)(11.377774 * (float)180.0);
+			phase = (uint16_t)(11.377774 * 90.0);
 			SetPhase1Value(phase);
 		}
 	
 		// Sets waveform state, starts DDS output 
-		//SetWaveformMode(WFM_OUT_SAWTOOTH, dds_control);
+		SetWaveformMode(WFM_OUT_SAWTOOTH, dds_control);
 	}
 	else if (	(strcmp((char *)parms[0], "freq0")	== 0) )
 	{
