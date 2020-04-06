@@ -73,6 +73,13 @@ SECTIONS
     _etext = .;        /* define a global symbols at end of code */
   } >FLASH
 
+  /* GNU Build ID - loaded into FLASH after .text */
+  .gnu_build_id :
+  {
+    PROVIDE(g_note_build_id = .);
+	*(.note.gnu.build-id)
+  } >FLASH
+
   /* Constant data goes into FLASH */
   .rodata :
   {
