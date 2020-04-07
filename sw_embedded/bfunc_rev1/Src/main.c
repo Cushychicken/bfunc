@@ -124,6 +124,14 @@ union ad9837_phase_set {
     uint8_t data[2];
 };
 
+typedef struct {
+	uint32_t namesz;
+	uint32_t descsz;
+	uint32_t type;
+	uint8_t data[];	
+} ElfNoteSection_t;
+
+extern const ElfNoteSection_t g_note_build_id;
 
 /* USER CODE END PV */
 
@@ -792,6 +800,30 @@ void ProcessCommand(uint8_t *cmd_buffer,
 	else if ( (strcmp((char *)parms[0], "idle")	== 0) ) {
 		// stop output
 		SetWaveformMode(IDLE, dds_control);
+	}
+	else if ( (strcmp((char *)parms[0], "buildid")	== 0) ) {
+		// stop output
+		const uint8_t *build_id_data = &g_note_build_id.data[g_note_build_id.namesz];
+
+	    result = CDC_Transmit_FS((uint8_t *) "Build ID: ", 10);
+	    while (result == USBD_BUSY) {
+	        result = CDC_Transmit_FS((uint8_t *) "Build ID: ", 10);
+	    }
+
+		for (int i = 0; i < g_note_build_id.descsz; ++i) {
+			char buildchar[3];
+			sprintf(buildchar, "%02x", build_id_data[i]);
+			result = CDC_Transmit_FS((uint8_t *)(buildchar), 2);
+			while (result == USBD_BUSY) {
+			     result = CDC_Transmit_FS((uint8_t *)(buildchar), 2);
+			}
+		}
+
+	    result = CDC_Transmit_FS((uint8_t *) "\n\r", 2);
+	    while (result == USBD_BUSY) {
+	        result = CDC_Transmit_FS((uint8_t *) "\n\r", 2);
+	    }
+
 	}
 
 	// Transmits shell prompt
