@@ -218,11 +218,14 @@ int main(void)
   uint8_t					rcv_buffer_index = 0;
   extern volatile uint8_t   usb_packet_flag;
 
+
   //Initialize cmd_buffer
   for (c = 0; c < 64; c++) {
 	  cmd_buffer[(uint8_t)c] = 0;
   }
   c = '\0';
+
+  HAL_TIM_Base_Start_IT(&htim2); 
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -230,7 +233,7 @@ int main(void)
   while (1)
   {
 	// Start-of-superloop blinky 
-	GPIOC->BSRR = GPIO_BSRR_BS_13;
+	//GPIOC->BSRR = GPIO_BSRR_BS_13;
 
 	// Main Serial Buffer Input Loop
 	//  Loops thru UserRxBufferFS, copies char into buffer, 
@@ -278,7 +281,7 @@ int main(void)
 	}
 
 	// End of superloop blinky
-    GPIOC->BSRR = GPIO_BSRR_BR_13;
+    //GPIOC->BSRR = GPIO_BSRR_BR_13;
   
   /* USER CODE END WHILE */
 
@@ -378,7 +381,7 @@ static void MX_TIM2_Init(void)
   htim2.Instance = TIM2;
   htim2.Init.Prescaler = 0;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 480;
+  htim2.Init.Period = 48;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
