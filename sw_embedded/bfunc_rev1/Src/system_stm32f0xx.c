@@ -138,6 +138,11 @@ uint32_t SystemCoreClock = 8000000;
 const uint8_t AHBPrescTable[16] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 6, 7, 8, 9};
 const uint8_t APBPrescTable[8]  = {0, 0, 0, 0, 1, 2, 3, 4};
 
+extern uint32_t dfu_reset_to_bootloader_magic;
+
+#define SYSMEM_RESET_VECTOR            0x1fffC804
+#define RESET_TO_BOOTLOADER_MAGIC_CODE 0xDEADBEEF
+#define BOOTLOADER_STACK_POINTER       0x200014a8
 /**
   * @}
   */
@@ -162,7 +167,9 @@ const uint8_t APBPrescTable[8]  = {0, 0, 0, 0, 1, 2, 3, 4};
   */
 void SystemInit(void)
 {
-  /* Reset the RCC clock configuration to the default reset state ------------*/
+	
+	
+	/* Reset the RCC clock configuration to the default reset state ------------*/
   /* Set HSION bit */
   RCC->CR |= (uint32_t)0x00000001U;
 
@@ -219,6 +226,15 @@ void SystemInit(void)
   /* Disable all interrupts */
   RCC->CIR = 0x00000000U;
 
+	
+    // Option to branch to the bootloader on startup	
+	if (dfu_reset_to_bootloader_magic == RESET_TO_BOOTLOADER_MAGIC_CODE) {
+        void (*bootloader)(void) = (void (*)(void)) (*((uint32_t *) SYSMEM_RESET_VECTOR));
+        dfu_reset_to_bootloader_magic = 0;
+        __set_MSP(BOOTLOADER_STACK_POINTER);
+        bootloader();
+        while (42);
+    }
 }
 
 /**

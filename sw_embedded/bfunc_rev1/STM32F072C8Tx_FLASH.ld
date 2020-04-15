@@ -132,6 +132,12 @@ SECTIONS
     _edata = .;        /* define a global symbol at data end */
   } >RAM AT> FLASH
 
+  /* Location for bootloader flag to be stored */
+  .bootloader_flags : 
+  {
+    dfu_reset_to_bootloader_magic = .;
+	. += 4;
+  } >RAM
   
   /* Uninitialized data section */
   . = ALIGN(4);

@@ -55,6 +55,10 @@
 #include "usbd_cdc_if.h"
 #include <string.h>
 
+
+#define SYSMEM_RESET_VECTOR            0x1fffC804
+#define RESET_TO_BOOTLOADER_MAGIC_CODE 0xDEADBEEF
+#define BOOTLOADER_STACK_POINTER       0x200014a8
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -133,6 +137,8 @@ typedef struct {
 
 extern const ElfNoteSection_t g_note_build_id;
 
+extern uint32_t dfu_reset_to_bootloader_magic;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -162,6 +168,12 @@ void Placeholder( void );
 
 /* USER CODE BEGIN 0 */
 
+// Resets the chip in System Memory Bootloader mode
+void dfu_run_bootloader()
+{
+    dfu_reset_to_bootloader_magic = RESET_TO_BOOTLOADER_MAGIC_CODE;
+    NVIC_SystemReset();
+}
 /* USER CODE END 0 */
 
 /**
@@ -225,7 +237,7 @@ int main(void)
   }
   c = '\0';
 
-  HAL_TIM_Base_Start_IT(&htim2); 
+  //HAL_TIM_Base_Start_IT(&htim2); 
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -827,6 +839,9 @@ void ProcessCommand(uint8_t *cmd_buffer,
 	        result = CDC_Transmit_FS((uint8_t *) "\n\r", 2);
 	    }
 
+	}
+	else if ( (strcmp((char *)parms[0], "upgrade")	== 0) ) {
+		dfu_run_bootloader();
 	}
 
 	// Transmits shell prompt
