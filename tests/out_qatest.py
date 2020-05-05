@@ -1,4 +1,5 @@
 import serial
+import platform
 
 startup_help = """
 This is the Outgoing QA Script for bFunc.
@@ -17,23 +18,31 @@ Hit Enter to begin.
 
 """
 
-ser = serial.Serial()
-
 try:
-    ser = serial.Serial('/dev/tty.usbmodem00000000001A1',
-                         baudrate=115200)
-except:
-    exit("Serial device not found. Exiting. Check for /dev/tty.usbmodem00000000001A1.")
+    port = ''
+    if platform.system() == 'Linux':
+        print("linux!")
+        port = '/dev/ttyACM0'
+    elif platform.system() == 'Darwin':
+        port = '/dev/tty.usbmodem00000000001A1'
 
-raw_input(startup_help)
-ser.write('sine 500 0\r\n')
-raw_input('1) Set a sine wave of 500Hz as output. `sine 500 0`\n')
-ser.write('freq0 1000\r\n')
-raw_input('2) Change frequency output to 1kHz.    `freq0 1000`\n')
-ser.write('phase0 180\r\n')
-raw_input('3) Invert the phase by 180 degrees.    `phase0 180`\n')
-ser.write('triangle\r\n')
-raw_input('4) Change the waveform to triangle.    `triangle`  \n')
-ser.write('square\r\n')
-raw_input('5) Change the waveform to square.      `square`    \n')
+    ser = serial.Serial(port,
+                        baudrate=115200)
+except Exception as inst:
+    print(type(inst))
+    print(inst.args)
+    print(inst)
+    exit("Serial device not found. Exiting.")
+
+input(startup_help)
+ser.write('sine 500 0\r\n'.encode())
+input('1) Scope should register a sine wave of 500Hz as output. `sine 500 0`\n')
+ser.write('freq0 1000\r\n'.encode())
+input('2) Scope should register frequency output at 1kHz.    `freq0 1000`\n')
+ser.write('phase0 180\r\n'.encode())
+input('3) Sine phase should be inverted by 180 degrees.    `phase0 180`\n')
+ser.write('triangle\r\n'.encode())
+input('4) Output waveform should now be triangle.    `triangle`  \n')
+ser.write('square\r\n'.encode())
+input('5) Output waveform should now be square.      `square`    \n')
 
