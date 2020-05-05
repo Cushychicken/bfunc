@@ -149,15 +149,16 @@ static void MX_TIM2_Init(void);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
-void InitCtrlAD9837(	union ad9837_dds_ctrl *dds_control);
-void StartOutput(		union ad9837_dds_ctrl *dds_control);
-void StopOutput(		union ad9837_dds_ctrl *dds_control);
-void SetFreq0Value(		uint32_t freq);
-void SetFreq1Value(		uint32_t freq);
-void SetPhase0Value(	uint16_t phase);
-void SetPhase1Value(	uint16_t phase);
-void SetWaveformMode(	enum   states          current_state,
-						union  ad9837_dds_ctrl *dds_control);
+void InitCtrlAD9837(union ad9837_dds_ctrl *dds_control);
+void StartOutput(union ad9837_dds_ctrl *dds_control);
+void StopOutput(union ad9837_dds_ctrl *dds_control);
+void SetFreq0Value(uint32_t freq);
+void SetFreq1Value(uint32_t freq);
+void SetPhase0Value(uint16_t phase);
+void SetPhase1Value(uint16_t phase);
+void SetWaveformMode(enum   states          current_state,
+				 	 union  ad9837_dds_ctrl *dds_control);
+void ToggleFreqReg(union  ad9837_dds_ctrl *dds_control);
 
 enum states NextState(	enum states CurrentState);
 void ProcessCommand(	uint8_t *cmd_buffer, 
@@ -212,24 +213,23 @@ int main(void)
   // Following line included to enable SWD debug
   //AFIO->MAPR = AFIO_MAPR_SWJ_CFG_JTAGDISABLE; 
 
-  enum states current_state = IDLE;
-  enum states next_state	= IDLE;
   union ad9837_dds_ctrl dds_control;
 
   // Initializing AD9837 as per ADI App Note AN-1070
   InitCtrlAD9837(&dds_control);
-  SetFreq0Value(0x00000000);
-  SetFreq1Value(0x00000000);
+  SetFreq0Value(0x00004189);
+  SetFreq1Value(0x00028f5c);
   SetPhase0Value(0x0000);
   SetPhase1Value(0x0000);
 
 
-  uint8_t					cmd_buffer[64];
-  char						c;
-  uint8_t					cmd_buffer_index = 0;
-  uint8_t					rcv_buffer_index = 0;
-  extern volatile uint8_t   usb_packet_flag;
+  uint8_t cmd_buffer[64];
+  uint8_t cmd_buffer_index = 0;
+  uint8_t rcv_buffer_index = 0;
+  uint8_t result;
 
+  char c;
+  extern volatile uint8_t   usb_packet_flag;
 
   //Initialize cmd_buffer
   for (c = 0; c < 64; c++) {
@@ -261,6 +261,10 @@ int main(void)
 				case '\b':	// Backspace
 					if (cmd_buffer_index > 0) {
 						cmd_buffer[--cmd_buffer_index] = '\0';
+						result = CDC_Transmit_FS((uint8_t *)" \b", 2);
+						while (result == USBD_BUSY) {
+							result = CDC_Transmit_FS((uint8_t *)" \b", 2);
+						}
 					}
 					break;
 	    	
@@ -292,9 +296,6 @@ int main(void)
 		usb_packet_flag = 0;
 	}
 
-	// End of superloop blinky
-    //GPIOC->BSRR = GPIO_BSRR_BR_13;
-  
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
@@ -393,7 +394,7 @@ static void MX_TIM2_Init(void)
   htim2.Instance = TIM2;
   htim2.Init.Prescaler = 0;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 48;
+  htim2.Init.Period = 5000;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
@@ -471,13 +472,14 @@ void InitCtrlAD9837(union ad9837_dds_ctrl *dds_control)
 void SetFreq0Value(uint32_t freq)
 {
     union ad9837_freq_set freq0;
-    freq0.reg.freqreg = 1;
-    freq0.reg.freqset = (unsigned int)(freq & 0x00003fff);
+
     // Note: All SPI transactions are len=1, but 
     // require a 2 byte input due to the peripheral being 
     // in 16-bit output mode
    
     // Sets 14 LSBs of Freq0 register
+    freq0.reg.freqreg = 1;
+    freq0.reg.freqset = (unsigned int)(freq & 0x00003fff);
     HAL_SPI_Transmit(&hspi1, freq0.data, 1, 10);
     // Sets 14 MSBs of Freq0 register
     freq0.reg.freqreg = 1;
@@ -494,13 +496,13 @@ void SetFreq1Value(uint32_t freq)
     // require a 2 byte input due to the peripheral being 
     // in 16-bit output mode
    
-	// Sets 14 LSBs of Freq0 register
+	// Sets 14 LSBs of Freq1 register
     freq1.reg.freqreg = 2;
     freq1.reg.freqset = (unsigned int)(freq & 0x00003fff);
     HAL_SPI_Transmit(&hspi1, freq1.data, 1, 10);
     
-	// Sets 14 MSBs of Freq0 register
-    freq1.reg.freqreg = 1;
+	// Sets 14 MSBs of Freq1 register
+    freq1.reg.freqreg = 2;
     freq1.reg.freqset = (unsigned int)((freq & 0x0fffc000) >> 14);
     HAL_SPI_Transmit(&hspi1, freq1.data, 1, 10);
 }
@@ -608,6 +610,25 @@ void SetWaveformMode(enum   states          current_state,
     }
 }
 
+// Swaps between freq registers used for output
+void ToggleFreqReg(union  ad9837_dds_ctrl *dds_control)
+{
+    static uint8_t freqout = 0;
+
+    if (freqout == 0) {
+        freqout = 1;
+        dds_control->reg.fsel = 1;
+    } else {
+        freqout = 0;
+        dds_control->reg.fsel = 0;
+    }
+
+    HAL_SPI_Transmit(&hspi1,
+                     dds_control->data,
+                     1,
+                     10);
+}
+
 // Helper function that just cycles through the states 
 // available to the waveform generator
 enum states NextState(enum states CurrentState)
@@ -649,7 +670,6 @@ void ProcessCommand(uint8_t *cmd_buffer,
 	
 	uint32_t frequency;
 	uint16_t phase;
-	enum states new_wfm_state;
 
 	// Zero parameter array
 	for (position = 0; position < 10; position++) {
@@ -811,6 +831,10 @@ void ProcessCommand(uint8_t *cmd_buffer,
 			phase = (uint16_t)(11.377774 * (float)atoi((char *)parms[1]));
 			SetPhase1Value(phase);
 		}
+	}
+	else if ( (strcmp((char *)parms[0], "freqsel")	== 0) ) {
+		// Changes freq output register
+        ToggleFreqReg(dds_control);
 	}
 	else if ( (strcmp((char *)parms[0], "idle")	== 0) ) {
 		// stop output
