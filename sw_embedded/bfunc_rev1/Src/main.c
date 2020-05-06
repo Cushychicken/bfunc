@@ -160,6 +160,7 @@ void SetWaveformMode(enum   states          current_state,
 				 	 union  ad9837_dds_ctrl *dds_control);
 void ToggleFreqReg(union  ad9837_dds_ctrl *dds_control);
 void TogglePhaseReg(union  ad9837_dds_ctrl *dds_control);
+void SetSymbolRate(void);
 
 enum states NextState(	enum states CurrentState);
 void ProcessCommand(	uint8_t *cmd_buffer, 
@@ -217,8 +218,9 @@ int main(void)
 
   // Initializing AD9837 as per ADI App Note AN-1070
   InitCtrlAD9837(&dds_control);
-  SetFreq0Value(0x00004189);
-  SetFreq1Value(0x00028f5c);
+  StopOutput(&dds_control);
+  SetFreq0Value(0x00000000);
+  SetFreq1Value(0x00000000);
   SetPhase0Value(0x0000);
   SetPhase1Value(0x0000);
 
@@ -606,12 +608,29 @@ void SetWaveformMode(enum   states          current_state,
                              10);
 			StartOutput(dds_control);
             break;
+        case MOD_PSK:
+            // Clears OPBITEN and MODE bits
+            dds_control->reg.opbiten = 0;
+            dds_control->reg.mode    = 0;
+            // Transmits new settings to DDS via SPI
+            HAL_SPI_Transmit(&hspi1,
+                             dds_control->data,
+                             1,
+                             10);
+            // Set timer with modulation interval
+            // Start waveform output
+            break;
 		case IDLE:
 			StopOutput(dds_control);
 			break;
         default:
 	        break;
     }
+}
+
+// Sets modulation keying interval of modulation states
+void SetSymbolRate(void) {
+
 }
 
 // Swaps between freq registers used for output
@@ -863,6 +882,19 @@ void ProcessCommand(uint8_t *cmd_buffer,
 	else if ( (strcmp((char *)parms[0], "phasesel")	== 0) ) {
 		// Changes freq output register
         TogglePhaseReg(dds_control);
+	}
+	else if ( (strcmp((char *)parms[0], "mod_bpsk")	== 0) ) {
+		// Sets up bFunc to transmit binary phase shift keying modulation
+		if (position > 1) {
+			frequency = (uint32_t)(16.777216 * (float)atoi((char *)parms[1]));
+			SetFreq0Value(frequency);
+			SetFreq1Value(frequency);
+		} 
+
+        SetPhase0Value(0);
+        SetPhase1Value(512);
+
+         
 	}
 	else if ( (strcmp((char *)parms[0], "idle")	== 0) ) {
 		// stop output
