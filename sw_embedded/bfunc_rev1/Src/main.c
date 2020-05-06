@@ -271,6 +271,10 @@ int main(void)
 				case 0x7f:	// Backspace, on a Mac
 					if (cmd_buffer_index > 0) {
 						cmd_buffer[--cmd_buffer_index] = '\0';
+						result = CDC_Transmit_FS((uint8_t *)"\b \b", 3);
+						while (result == USBD_BUSY) {
+							result = CDC_Transmit_FS((uint8_t *)"\b \b", 3);
+						}
 					}
 					break;
 	    	
