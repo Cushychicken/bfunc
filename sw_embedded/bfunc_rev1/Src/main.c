@@ -159,11 +159,11 @@ void SetPhase1Value(uint16_t phase);
 void SetWaveformMode(enum   states          current_state,
 				 	 union  ad9837_dds_ctrl *dds_control);
 void ToggleFreqReg(union  ad9837_dds_ctrl *dds_control);
+void TogglePhaseReg(union  ad9837_dds_ctrl *dds_control);
 
 enum states NextState(	enum states CurrentState);
 void ProcessCommand(	uint8_t *cmd_buffer, 
 						union ad9837_dds_ctrl *dds_control);
-void Placeholder( void );
 
 /* USER CODE END PFP */
 
@@ -629,6 +629,26 @@ void ToggleFreqReg(union  ad9837_dds_ctrl *dds_control)
                      10);
 }
 
+// Swaps between phase registers used for output
+void TogglePhaseReg(union  ad9837_dds_ctrl *dds_control)
+{
+    static uint8_t phaseout = 0;
+
+    if (phaseout == 0) {
+        phaseout = 1;
+        dds_control->reg.psel = 1;
+    } else {
+        phaseout = 0;
+        dds_control->reg.psel = 0;
+    }
+
+    HAL_SPI_Transmit(&hspi1,
+                     dds_control->data,
+                     1,
+                     10);
+}
+
+
 // Helper function that just cycles through the states 
 // available to the waveform generator
 enum states NextState(enum states CurrentState)
@@ -835,6 +855,10 @@ void ProcessCommand(uint8_t *cmd_buffer,
 	else if ( (strcmp((char *)parms[0], "freqsel")	== 0) ) {
 		// Changes freq output register
         ToggleFreqReg(dds_control);
+	}
+	else if ( (strcmp((char *)parms[0], "phasesel")	== 0) ) {
+		// Changes freq output register
+        TogglePhaseReg(dds_control);
 	}
 	else if ( (strcmp((char *)parms[0], "idle")	== 0) ) {
 		// stop output
