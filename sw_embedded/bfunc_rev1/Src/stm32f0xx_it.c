@@ -135,6 +135,9 @@ void TIM2_IRQHandler(void)
 
   /* USER CODE END TIM2_IRQn 0 */
   HAL_TIM_IRQHandler(&htim2);
+  if (TIM2->SR & TIM_SR_UIF) {
+      TIM2->SR &= ~(TIM_SR_UIF);
+  }
   /* USER CODE BEGIN TIM2_IRQn 1 */
     if (led_state) {
 		GPIOC->BSRR = GPIO_BSRR_BS_13;
@@ -143,6 +146,8 @@ void TIM2_IRQHandler(void)
 		GPIOC->BSRR = GPIO_BSRR_BR_13;
 		led_state = 1;
 	}
+
+    TogglePhaseReg(); 
   /* USER CODE END TIM2_IRQn 1 */
 }
 

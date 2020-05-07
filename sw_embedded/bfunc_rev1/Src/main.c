@@ -74,7 +74,8 @@ enum states {
     WFM_OUT_SINE,
     WFM_OUT_TRIANGLE,
     WFM_OUT_SQUARE,
-    WFM_OUT_SAWTOOTH
+    WFM_OUT_SAWTOOTH,
+    MOD_PSK
 };
 
 enum waveform_modes {
@@ -160,7 +161,8 @@ void SetWaveformMode(enum   states          current_state,
 				 	 union  ad9837_dds_ctrl *dds_control);
 void ToggleFreqReg(union  ad9837_dds_ctrl *dds_control);
 void TogglePhaseReg(union  ad9837_dds_ctrl *dds_control);
-void SetSymbolRate(void);
+void SetSymbolRate(TIM_TypeDef *TIMx, uint16_t ms);
+void StopModulation(TIM_TypeDef *TIMx);
 
 enum states NextState(	enum states CurrentState);
 void ProcessCommand(	uint8_t *cmd_buffer, 
@@ -622,6 +624,7 @@ void SetWaveformMode(enum   states          current_state,
             break;
 		case IDLE:
 			StopOutput(dds_control);
+            StopModulation(TIM2);
 			break;
         default:
 	        break;
@@ -629,21 +632,34 @@ void SetWaveformMode(enum   states          current_state,
 }
 
 // Sets modulation keying interval of modulation states
-void SetSymbolRate(void) {
+void SetSymbolRate(TIM_TypeDef *TIMx, uint16_t ms) {
+    TIMx->CR1 &= ~(TIM_CR1_CEN); 
 
+    if (TIMx == TIM2) {
+        RCC->APB1RSTR |= (RCC_APB1RSTR_TIM2RST);
+        RCC->APB1RSTR &= ~(RCC_APB1RSTR_TIM2RST);
+    }
+
+    TIMx->PSC = 48000000/1000;
+    TIMx->ARR = ms;
+
+    TIMx->EGR  |= TIM_EGR_UG; 
+    TIMx->DIER |= TIM_DIER_UIE; 
+    TIMx->CR1  |= TIM_CR1_CEN; 
+}
+
+// Stops timer that toggles modulations
+void StopModulation(TIM_TypeDef *TIMx) {
+    TIMx->CR1 &= ~(TIM_CR1_CEN);
 }
 
 // Swaps between freq registers used for output
 void ToggleFreqReg(union  ad9837_dds_ctrl *dds_control)
 {
-    static uint8_t freqout = 0;
-
-    if (freqout == 0) {
-        freqout = 1;
-        dds_control->reg.fsel = 1;
-    } else {
-        freqout = 0;
+    if (dds_control->reg.fsel == 1) {
         dds_control->reg.fsel = 0;
+    } else {
+        dds_control->reg.fsel = 1;
     }
 
     HAL_SPI_Transmit(&hspi1,
@@ -892,9 +908,13 @@ void ProcessCommand(uint8_t *cmd_buffer,
 		} 
 
         SetPhase0Value(0);
-        SetPhase1Value(512);
+		phase = (uint16_t)(11.377774 * (float)180.0);
+        SetPhase1Value(phase);
 
-         
+        if (position > 2) {
+            SetSymbolRate(TIM2, atoi((char *)parms[2]));
+        }
+		SetWaveformMode(MOD_PSK, dds_control);
 	}
 	else if ( (strcmp((char *)parms[0], "idle")	== 0) ) {
 		// stop output
