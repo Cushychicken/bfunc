@@ -60,3 +60,6 @@ sw_embedded/*/build
 .DS_Store
 /hardware/*.sch-bak
 /hardware/*.kicad_pcb-bak
+
+# Contents of temporary Verilog sim sandbox
+sw_rtl/tmp/*
