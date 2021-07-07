@@ -1,4 +1,4 @@
-from Tkinter import *
+from tkinter import *
 import serial
 from serial.tools.list_ports import comports
 
@@ -71,7 +71,7 @@ def change_port_dropdown(*args):
         ser.baudrate = 115200
         ser.port = newport
         ser.open()
-        print ser
+        print(ser)
 
 # Debug Function to detect change in radiobutton state
 def change_outmode_radio(*args):
