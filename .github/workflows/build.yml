@@ -37,6 +37,7 @@ jobs:
     needs: [build-stm32f0]
     if: always()
     steps:
+    - uses: actions/checkout@v4
     - name: Build Status Summary
       run: |
         echo "## Embedded Firmware Build Summary" >> $GITHUB_STEP_SUMMARY
