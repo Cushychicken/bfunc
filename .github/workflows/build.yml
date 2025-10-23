@@ -38,6 +38,9 @@ jobs:
     if: always()
     steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        fetch-tags: true
     - name: Build Status Summary
       run: |
         echo "## Embedded Firmware Build Summary" >> $GITHUB_STEP_SUMMARY
