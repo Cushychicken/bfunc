@@ -278,6 +278,11 @@ static void ParseCommand(const char *cmd, waveform_controller_t *controller)
     else if (strcmp(parms[0], "buildid") == 0) {
         SendBuildId();
     }
+    else if (strcmp(parms[0], "version") == 0) {
+        SendResponse("Firmware Version: ");
+        SendResponse(GIT_VERSION);
+        SendResponse("\n\r");
+    }
     else if (strcmp(parms[0], "upgrade") == 0) {
         // DFU bootloader entry - this would need to be implemented
         SendResponse("DFU mode not implemented\n\r");

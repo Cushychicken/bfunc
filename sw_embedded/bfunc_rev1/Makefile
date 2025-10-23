@@ -119,6 +119,12 @@ C_DEFS =  \
 -DUSE_HAL_DRIVER \
 -DSTM32F072xB
 
+# Git version (if available)
+GIT_VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo "unknown")
+ifneq ($(GIT_VERSION),)
+C_DEFS += -DGIT_VERSION=\"$(GIT_VERSION)\"
+endif
+
 
 # AS includes
 AS_INCLUDES = 
