@@ -147,7 +147,7 @@ void TIM2_IRQHandler(void)
 		led_state = 1;
 	}
 
-    TogglePhaseReg(); 
+    // TogglePhaseReg(); // TODO: Update to use new modular approach 
   /* USER CODE END TIM2_IRQn 1 */
 }
 

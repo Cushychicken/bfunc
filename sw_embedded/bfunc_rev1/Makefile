@@ -37,6 +37,9 @@ BUILD_DIR = build
 # C sources
 C_SOURCES =  \
 Src/main.c \
+Src/ad9837_driver.c \
+Src/waveform_controller.c \
+Src/command_parser.c \
 Src/usb_device.c \
 Src/usbd_conf.c \
 Src/usbd_desc.c \
@@ -98,7 +101,7 @@ BIN = $(CP) -O binary -S
 # cpu
 CPU = -mcpu=cortex-m0
 
-# fpu
+# fpui
 # NONE for Cortex-M0/M0+/M3
 
 # float-abi
