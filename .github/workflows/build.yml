@@ -1,0 +1,51 @@
+name: Build Embedded Firmware
+
+on:
+  push:
+    branches: [ main, develop, feat/* ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  build-stm32f0:
+    name: Build STM32F0 Firmware
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install ARM GCC Toolchain
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc-arm-none-eabi
+    
+    - name: Build STM32F0 Firmware
+      run: |
+        cd sw_embedded/bfunc_rev1
+        make clean
+        make all
+    
+    - name: Upload STM32F0 Build Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: stm32f0-firmware
+        path: sw_embedded/bfunc_rev1/build/*.bin
+        retention-days: 30
+
+  build-summary:
+    name: Build Summary
+    runs-on: ubuntu-latest
+    needs: [build-stm32f0]
+    if: always()
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        fetch-tags: true
+    - name: Build Status Summary
+      run: |
+        echo "## Embedded Firmware Build Summary" >> $GITHUB_STEP_SUMMARY
+        echo "**Version:** $(git describe --tags --always --dirty)" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Firmware | Status |" >> $GITHUB_STEP_SUMMARY
+        echo "|----------|--------|" >> $GITHUB_STEP_SUMMARY
+        echo "| STM32F0 (bfunc_rev1) | ${{ needs.build-stm32f0.result }} |" >> $GITHUB_STEP_SUMMARY

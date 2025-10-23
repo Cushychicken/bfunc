@@ -203,8 +203,7 @@ int main(void)
   uint8_t	*head_parse_target  = UserRxBufferFS;
   uint8_t	*tail_parse_target  = UserRxBufferFS;
   uint8_t   parse_buffer[64];
-  uint8_t	*head_parse_target  = parse_buffer;
-  uint8_t	*tail_parse_target  = parse_buffer;
+  
   uint8_t	usb_packet_flag		= 0;
 
   while (1)
