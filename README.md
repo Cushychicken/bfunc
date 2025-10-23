@@ -18,6 +18,32 @@ The sw_embedded directory contains two subfolders:
 * `stm32_cube_bfunc/` contains all the software used for building the prototype, which I made out of a STM32 BluePill board and a SparkFun Minigen Pro shield. 
 * `bfunc_rev1/` contains all the software used in the first board revision. 
 
+## Building the Project
+
+This project uses GitHub Actions for automated building of the embedded firmware. The build process includes:
+
+- **STM32F0 Firmware**: Builds the bfunc_rev1 firmware using ARM GCC toolchain
+- **STM32F1 Firmware**: Builds the stm32_cube_bfunc firmware using ARM GCC toolchain
+
+### Local Development
+
+To build the embedded firmware locally, you'll need:
+
+- ARM GCC toolchain for embedded development
+
+Build commands:
+```bash
+# STM32F0 firmware
+cd sw_embedded/bfunc_rev1
+make clean
+make all
+
+# STM32F1 firmware  
+cd sw_embedded/stm32_cube_bfunc
+make clean
+make all
+```
+
 ## How can I contribute? 
 
 I'm so glad you asked! Check out the [Call for Users](http://cushychicken.github.io/bfunc-call-for-users/) page on my blog. That will outline the next steps for getting a board, and getting yourself set up to work on it. 
